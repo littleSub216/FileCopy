@@ -19,9 +19,9 @@
 
 using namespace C150NETWORK; // for all the comp150 utilities
 
-const int TargetDir = 4; // server name is 1st arg
+const int TargetDir = 3; // target directory name is 3th arg
 
-void checksum(char buffer[], int length, char shaComputedHash[]);
+void checksum(char filename[], char shaComputedHash[]);
 // void copyFile(string sourceDir, string fileName, string targetDir, int nastiness); // fwd decl
 bool isFile(string fname);
 void checkDirectory(char *dirname);
@@ -116,8 +116,35 @@ int main(int argc, char *argv[])
                 response = argv[TargetDir];
             }
             else
-            {
-                response = shaComputedHash;
+            {   // recived the sha of file
+                //
+                //  Loop copying the files
+                //
+                //  copyfile takes name of target file
+                //
+                TARGET = opendir(argv[TargetDir]);
+                if (TARGET == NULL)
+                {
+                    fprintf(stderr, "Error opening target directory %s \n", argv[TargetDir]);
+                    exit(8);
+                }
+                while ((sourceFile = readdir(TARGET)) != NULL)
+                {
+                    // skip the . and .. names
+                    if ((strcmp(sourceFile->d_name, ".") == 0) ||
+                        (strcmp(sourceFile->d_name, "..") == 0))
+                        continue; // never copy . or ..
+
+                    // generate the sha code for inputfile
+                    checksum((const unsigned char *)sourceFile->d_name, shaComputedHash);
+                    //
+                    // begin end-to-end check
+                    //
+                    // to do :
+                    // - generate all the sha1 of files or
+                    // - check one by one
+
+                }
             }
 
             //

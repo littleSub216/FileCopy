@@ -28,7 +28,7 @@ const int sourceDir = 4; // Source directory is the 4th arg
 void copyFile(string sourceDir, string fileName, string targetDir, int nastiness); // fwd decl
 bool isFile(string fname);
 void checkDirectory(char *dirname);
-void checksum(char buffer[], int length, char shaComputedHash[]);
+void checksum(char filenames[], char shaComputedHash[]);
 
 int main(int argc, char *argv[])
 {
@@ -41,7 +41,7 @@ int main(int argc, char *argv[])
     ssize_t readlen;           // amount of data read from socket
     char incomingFileDic[512]; // received message data
 
-    stirng requestCopy; // request the server to copy file
+    stirng requestCopy;                // request the server to copy file
     unsigned char shaComputedHash[20]; // hash goes here
 
     //
@@ -143,23 +143,28 @@ int main(int argc, char *argv[])
 
             // do the copy -- this will check for and
             // skip subdirectories
+
             copyFile(argv[sourceDir], sourceFile->d_name, incomingFileDic, nastiness);
+            // generate the sha code for inputfile
+            checksum((const unsigned char *)sourceFile->d_name, shaComputedHash);
+            sock->write(ushaComputedHashns, strlen(shaComputedHash) + 1);
         }
-        closedir(SRC);
     }
-    //
-    //  Handle networking errors -- for now, just print message and give up!
-    //
-    catch (C150NetworkException &e)
-    {
-        // Write to debug log
-        c150debug->printf(C150ALWAYSLOG, "Caught C150NetworkException: %s\n",
-                          e.formattedExplanation().c_str());
-        // In case we're logging to a file, write to the console too
-        cerr << argv[0] << ": caught C150NetworkException: " << e.formattedExplanation()
-             << endl;
-    }
-    return 0;
+    closedir(SRC);
+}
+//
+//  Handle networking errors -- for now, just print message and give up!
+//
+catch (C150NetworkException &e)
+{
+    // Write to debug log
+    c150debug->printf(C150ALWAYSLOG, "Caught C150NetworkException: %s\n",
+                      e.formattedExplanation().c_str());
+    // In case we're logging to a file, write to the console too
+    cerr << argv[0] << ": caught C150NetworkException: " << e.formattedExplanation()
+         << endl;
+}
+return 0;
 }
 
 // ------------------------------------------------------
@@ -206,7 +211,6 @@ void copyFile(string sourceDir, string fileName, string targetDir, int nastiness
     char *buffer; // buffer with your file data
     struct stat statbuf;
     size_t sourceSize;
-    
 
     //
     // Put together directory and filenames SRC/file TARGET/file
@@ -287,8 +291,6 @@ void copyFile(string sourceDir, string fileName, string targetDir, int nastiness
             cerr << "Error reading file " << sourceName << "  errno=" << strerror(errno) << endl;
             exit(16);
         }
-        //generate the sha code for inputfile
-        checksum((const unsigned char *)buffer, len, shaComputedHash);
 
         if (inputFile.fclose() != 0)
         {
@@ -308,6 +310,7 @@ void copyFile(string sourceDir, string fileName, string targetDir, int nastiness
         // Write the whole file
         //
         len = outputFile.fwrite(buffer, 1, sourceSize);
+
         if (len != sourceSize)
         {
             cerr << "Error writing file " << targetName << "  errno=" << strerror(errno) << endl;
@@ -346,35 +349,80 @@ void copyFile(string sourceDir, string fileName, string targetDir, int nastiness
 // Generate the SHA based on the input files
 //
 // ------------------------------------------------------
-void checksum(char buffer[], int length, char shaComputedHash[])
+void checksum(char filename[], char shaComputedHash[])
 {
     int i, j;
     ifstream *t;
     stringstream *buffer;
 
     unsigned char obuf[20];
-
-    if (argc < 2)
+    printf("SHA1 (\"%s\") = ", filename);
+    t = new ifstream(filename);
+    buffer = new stringstream;
+    *buffer << t->rdbuf();
+    SHA1((const unsigned char *)buffer->str().c_str(),
+         (buffer->str()).length(), obuf);
+    for (i = 0; i < 20; i++)
     {
-        fprintf(stderr, "usage: %s file [file...]\n", argv[0]);
-        exit(1);
+        shaComputedHash[i] = (unsigned int)obuf[i];
     }
+    delete t;
+    delete buffer;
 
-    for (j = 1; j < argc; ++j)
-    {
-        printf("SHA1 (\"%s\") = ", argv[j]);
-        t = new ifstream(argv[j]);
-        buffer = new stringstream;
-        *buffer << t->rdbuf();
-        SHA1((const unsigned char *)buffer->str().c_str(),
-             (buffer->str()).length(), obuf);
-        for (i = 0; i < 20; i++)
-        {
-            printf("%02x", (unsigned int)obuf[i]);
-        }
-        printf("\n");
-        delete t;
-        delete buffer;
-    }
     return 0;
+}
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+//
+//                     checkAndPrintMessage
+//
+//        Make sure length is OK, clean up response buffer
+//        and print it to standard output.
+//
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+void checkAndPrintMessage(ssize_t readlen, char *msg, ssize_t bufferlen)
+{
+    //
+    // Except in case of timeouts, we're not expecting
+    // a zero length read
+    //
+    if (readlen == 0)
+    {
+        throw C150NetworkException("Unexpected zero length read in client");
+    }
+
+    // DEFENSIVE PROGRAMMING: we aren't even trying to read this much
+    // We're just being extra careful to check this
+    if (readlen > (int)(bufferlen))
+    {
+        throw C150NetworkException("Unexpected over length read in client");
+    }
+
+    //
+    // Make sure server followed the rules and
+    // sent a null-terminated string (well, we could
+    // check that it's all legal characters, but
+    // at least we look for the null)
+    //
+    if (msg[readlen - 1] != '\0')
+    {
+        throw C150NetworkException("Client received message that was not null terminated");
+    };
+
+    //
+    // Use a routine provided in c150utility.cpp to change any control
+    // or non-printing characters to "." (this is just defensive programming:
+    // if the server maliciously or inadvertently sent us junk characters, then we
+    // won't send them to our terminal -- some
+    // control characters can do nasty things!)
+    //
+    // Note: cleanString wants a C++ string, not a char*, so we make a temporary one
+    // here. Not super-fast, but this is just a demo program.
+    string s(msg);
+    cleanString(s);
+
+    // Echo the response on the console
+
+    c150debug->printf(C150APPLICATION, "PRINTING RESPONSE: Response received is \"%s\"\n", s.c_str());
+    printf("Response received is \"%s\"\n", s.c_str());
 }
