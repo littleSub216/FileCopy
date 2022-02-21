@@ -65,17 +65,16 @@ makedatafile: makedatafile.cpp
 	$(CPP) -o makedatafile makedatafile.cpp 
 
 #
-# Build the fileserver 
+# Build the fileserver
 #
-fileserver: fileserver.cpp
-	$(CPP) -o makedatafile fileserver.cpp -lssl -lcrypto
+fileserver: fileserver.cpp  $(C150AR) $(INCLUDES)
+	$(CPP) -o fileserver  $(CPPFLAGS) fileserver.cpp -lssl -lcrypto $(C150AR)
 
 #
-# Build the fileserver 
-#s
-fileclient: fileclient.cpp
-	$(CPP) -o makedatafile fileclient.cpp -lssl -lcrypto
-
+# Build the file client
+#
+fileclient: fileclient.cpp  $(C150AR) $(INCLUDES)
+	$(CPP) -o fileclient  $(CPPFLAGS) fileclient.cpp -lssl -lcrypto$(C150AR)
 #
 # To get any .o, compile the corresponding .cpp
 #
@@ -88,6 +87,6 @@ fileclient: fileclient.cpp
 # for forcing complete rebuild#
 
 clean:
-	 rm -f nastyfiletest sha1test makedatafile	fileserver	fileclient*.o 
+	 rm -f nastyfiletest sha1test makedatafile fileserver fileclient *.o 
 
 

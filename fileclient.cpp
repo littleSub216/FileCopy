@@ -2,6 +2,7 @@
 //
 //              fileclient <server> <networknastiness> <filenastiness> <srcdir>
 
+#include "c150nastydgmsocket.h"
 #include "c150nastyfile.h" // for c150nastyfile & framework
 #include "c150grading.h"
 #include "c150debug.h"

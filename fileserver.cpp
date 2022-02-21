@@ -17,7 +17,9 @@
 #include <iostream> // for cout
 #include <fstream>  // for input files
 #include <openssl/sha.h>
+#include <vector>
 
+using namespace std;         // for C++ std library
 using namespace C150NETWORK; // for all the comp150 utilities
 
 const int TargetDir = 3; // target directory name is 3th arg
@@ -26,6 +28,7 @@ void checksum(char filename[], char shaComputedHash[]);
 // void copyFile(string sourceDir, string fileName, string targetDir, int nastiness); // fwd decl
 bool isFile(string fname);
 void checkDirectory(char *dirname);
+void split(const string &s, char c, vector<string> &v);
 
 int main(int argc, char *argv[])
 {
@@ -35,9 +38,11 @@ int main(int argc, char *argv[])
     int networknastiness;      // corruption on files
     string response;
     unsigned char shaComputedHash[20]; // hash goes here
-    bool end2endCheck;                 // if the file is identical with the original one
+    // bool end2endCheck;                 // if the file is identical with the original one
     const char delim = '#';            //  the delimeter to spilt the incoming message
     vector<string> incomingfile;       // the recived file
+    DIR *TARGET;               // Unix descriptor for target
+    
 
     // grade assignment
     GRADEME(argc, argv);
@@ -137,11 +142,10 @@ int main(int argc, char *argv[])
                     exit(8);
                 }
                 split(incomingMessage, delim, incomingfile);
-
                 while ((sourceFile = readdir(TARGET)) != NULL)
                 {
                     // skip the file not been generated the checksum
-                    if((strcmp(sourceFile->d_name, incomingfile[0])!= 0)
+                    if((strcmp(sourceFile->d_name, incomingfile[0])!= 0))
                         continue;
 
                     // skip the . and .. names
@@ -268,43 +272,31 @@ int main(int argc, char *argv[])
 // Generate the SHA based on the input files
 //
 // ------------------------------------------------------
-void checksum(char buffer[], int length, char shaComputedHash[])
+void checksum(char filename[], int length, char shaComputedHash[])
 {
     int i, j;
     ifstream *t;
     stringstream *buffer;
 
     unsigned char obuf[20];
-
-    if (argc < 2)
+    printf("SHA1 (\"%s\") = ", filename);
+    t = new ifstream(filename);
+    buffer = new stringstream;
+    *buffer << t->rdbuf();
+    SHA1((const unsigned char *)buffer->str().c_str(),
+         (buffer->str()).length(), obuf);
+    for (i = 0; i < 20; i++)
     {
-        fprintf(stderr, "usage: %s file [file...]\n", argv[0]);
-        exit(1);
+        shaComputedHash[i] = (unsigned int)obuf[i];
     }
-
-    for (j = 1; j < argc; ++j)
-    {
-        printf("SHA1 (\"%s\") = ", argv[j]);
-        t = new ifstream(argv[j]);
-        buffer = new stringstream;
-        *buffer << t->rdbuf();
-        SHA1((const unsigned char *)buffer->str().c_str(),
-             (buffer->str()).length(), obuf);
-        for (i = 0; i < 20; i++)
-        {
-            printf("%02x", (unsigned int)obuf[i]);
-        }
-        printf("\n");
-        delete t;
-        delete buffer;
-    }
-    return 0;
+    delete t;
+    delete buffer;
 }
 
-void setUpDebugLogging(const char *logname, int argc, char *argv[])
-{
-    // tbc
-}
+// void setUpDebugLogging(const char *logname, int argc, char *argv[])
+// {
+//     // tbc
+// }
 
 void split(const string &s, char c,
            vector<string> &v)

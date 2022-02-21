@@ -63,7 +63,7 @@ int main(int argc, char *argv[])
 {
 
   int nastiness;
-  DIR *SRC;                  // Unix descriptor for open directory
+  DIR *SRC;                   // Unix descriptor for open directory
   DIR *TARGET;               // Unix descriptor for target
   struct dirent *sourceFile; // Directory entry for source file
   
