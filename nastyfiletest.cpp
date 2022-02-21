@@ -66,6 +66,7 @@ int main(int argc, char *argv[])
   DIR *SRC;                  // Unix descriptor for open directory
   DIR *TARGET;               // Unix descriptor for target
   struct dirent *sourceFile; // Directory entry for source file
+  
 
   //
   //  DO THIS FIRST OR YOUR ASSIGNMENT WON'T BE GRADED!
@@ -128,6 +129,7 @@ int main(int argc, char *argv[])
   //
   while ((sourceFile = readdir(SRC)) != NULL)
   {
+    
     // skip the . and .. names
     if ((strcmp(sourceFile->d_name, ".") == 0) ||
         (strcmp(sourceFile->d_name, "..") == 0))

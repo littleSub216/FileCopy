@@ -43,7 +43,7 @@ C150AR = $(C150LIB)c150ids.a
 LDFLAGS = 
 INCLUDES = $(C150LIB)c150dgmsocket.h $(C150LIB)c150nastydgmsocket.h $(C150LIB)c150network.h $(C150LIB)c150exceptions.h $(C150LIB)c150debug.h $(C150LIB)c150utility.h
 
-all: nastyfiletest makedatafile sha1test
+all: nastyfiletest makedatafile sha1test fileserver fileclient
 
 
 #
@@ -65,6 +65,18 @@ makedatafile: makedatafile.cpp
 	$(CPP) -o makedatafile makedatafile.cpp 
 
 #
+# Build the fileserver 
+#
+fileserver: fileserver.cpp
+	$(CPP) -o makedatafile fileserver.cpp -lssl -lcrypto
+
+#
+# Build the fileserver 
+#s
+fileclient: fileclient.cpp
+	$(CPP) -o makedatafile fileclient.cpp -lssl -lcrypto
+
+#
 # To get any .o, compile the corresponding .cpp
 #
 %.o:%.cpp  $(INCLUDES)
@@ -76,6 +88,6 @@ makedatafile: makedatafile.cpp
 # for forcing complete rebuild#
 
 clean:
-	 rm -f nastyfiletest sha1test makedatafile *.o 
+	 rm -f nastyfiletest sha1test makedatafile	fileserver	fileclient*.o 
 
 

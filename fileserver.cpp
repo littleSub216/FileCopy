@@ -3,6 +3,7 @@
 //
 //         fileserver <networknastiness> <filenastiness> <targetdir>
 
+#include "c150nastydgmsocket.h"
 #include "c150nastyfile.h" // for c150nastyfile & framework
 #include "c150grading.h"
 #include "c150debug.h"
@@ -34,6 +35,9 @@ int main(int argc, char *argv[])
     int networknastiness;      // corruption on files
     string response;
     unsigned char shaComputedHash[20]; // hash goes here
+    bool end2endCheck;                 // if the file is identical with the original one
+    const char delim = '#';            //  the delimeter to spilt the incoming message
+    vector<string> incomingfile;       // the recived file
 
     // grade assignment
     GRADEME(argc, argv);
@@ -113,23 +117,33 @@ int main(int argc, char *argv[])
             //
             if (strspn(incomingMessage, "0123456789") == strlen(incomingMessage))
             {
+                // check the argument of incmoing messgae is 1 return the filename
                 response = argv[TargetDir];
             }
+
             else
-            {   // recived the sha of file
+            { // check the argument of incmoing messgae is 1 return the filename
+                // recived the sha of file
                 //
-                //  Loop copying the files
+                // Loop copying the files
                 //
-                //  copyfile takes name of target file
+                // copyfile takes name of target file
                 //
+
                 TARGET = opendir(argv[TargetDir]);
                 if (TARGET == NULL)
                 {
                     fprintf(stderr, "Error opening target directory %s \n", argv[TargetDir]);
                     exit(8);
                 }
+                split(incomingMessage, delim, incomingfile);
+
                 while ((sourceFile = readdir(TARGET)) != NULL)
                 {
+                    // skip the file not been generated the checksum
+                    if((strcmp(sourceFile->d_name, incomingfile[0])!= 0)
+                        continue;
+
                     // skip the . and .. names
                     if ((strcmp(sourceFile->d_name, ".") == 0) ||
                         (strcmp(sourceFile->d_name, "..") == 0))
@@ -141,10 +155,16 @@ int main(int argc, char *argv[])
                     // begin end-to-end check
                     //
                     // to do :
-                    // - generate all the sha1 of files or
                     // - check one by one
-
+                    if(strcmp(incomingfile[1],shaComputedHash) == 0){
+                        response = "Success";
+                    }else{
+                        response = "Fail";
+                    }
                 }
+                c150debug->printf(C150APPLICATION, "Responding with message=\"%s\"",
+                                  response.c_str());
+                sock->write(response.c_str(), response.length() + 1);
             }
 
             //
@@ -284,4 +304,21 @@ void checksum(char buffer[], int length, char shaComputedHash[])
 void setUpDebugLogging(const char *logname, int argc, char *argv[])
 {
     // tbc
+}
+
+void split(const string &s, char c,
+           vector<string> &v)
+{
+    string::size_type i = 0;
+    string::size_type j = s.find(c);
+
+    while (j != string::npos)
+    {
+        v.push_back(s.substr(i, j - i));
+        i = ++j;
+        j = s.find(c, j);
+
+        if (j == string::npos)
+            v.push_back(s.substr(i, s.length()));
+    }
 }

@@ -43,7 +43,8 @@ int main(int argc, char *argv[])
 
     stirng requestCopy;                // request the server to copy file
     unsigned char shaComputedHash[20]; // hash goes here
-
+    char *bufferMessage;               // store the filename and checksum
+    size_t bufferLen;
     //
     //  Set up debug message logging
     //
@@ -145,9 +146,22 @@ int main(int argc, char *argv[])
             // skip subdirectories
 
             copyFile(argv[sourceDir], sourceFile->d_name, incomingFileDic, nastiness);
+
             // generate the sha code for inputfile
             checksum((const unsigned char *)sourceFile->d_name, shaComputedHash);
-            sock->write(ushaComputedHashns, strlen(shaComputedHash) + 1);
+            // merge the filename and checksum
+            bufferLen = sourceFile->d_namlen + 21; // the lenth of checksum and slash
+            bufferMessage = (char *)malloc(bufferLen);
+            sourceFile.fread(bufferMessage, 1, sourceFile->d_namlen);
+            bufferMessage = bufferMessage + "#";
+            shaComputedHash.fread(bufferMessage, 1, 20);
+            // send the filename and checksum
+            sock->write(bufferMessage, strlen(bufferMessage) + 1);
+            // // send the checksum
+            // sock->write(ushaComputedHashns, strlen(shaComputedHash) + 1);
+
+            // free the message file
+            free(bufferMessage);
         }
     }
     closedir(SRC);
