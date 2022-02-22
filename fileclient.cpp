@@ -378,7 +378,7 @@ void checksum(char filename[], char shaComputedHash[])
          (buffer->str()).length(), obuf);
     for (i = 0; i < 20; i++)
     {
-        shaComputedHash[i] = (unsigned int)obuf[i];
+        shaComputedHash[i] = (int)obuf[i];
     }
     delete t;
     delete buffer;

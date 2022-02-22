@@ -146,7 +146,10 @@ int main(int argc, char *argv[])
                 while ((sourceFile = readdir(TARGET)) != NULL)
                 {
                     // skip the file not been generated the checksum
-                    if ((strcmp(sourceFile->d_name, (const char*)incomingfile[0]) != 0))
+                    string comingchecksum = incomingfile[0];
+                    string generatechecksum;
+
+                    if ((strcmp(sourceFile->d_name, comingchecksum) != 0))
                         continue;
 
                     // skip the . and .. names
@@ -156,26 +159,21 @@ int main(int argc, char *argv[])
 
                     // generate the sha code for inputfile
                     checksum((char *)sourceFile->d_name, (char *)shaComputedHash);
+                    generatechecksum = shaComputedHash;
                     //
                     // begin end-to-end check
                     //
                     // to do :
                     // - check one by one
-                    response = "Success";
-                    for (int i = 0; i < 20; i++)
+                    if (strcmp(comingchecksum, generatechecksum) == 0)
                     {
-                        if (strcmp(incomingfile[1][i], (const char *)shaComputedHash[i]) == 0)
-                        {
 
-                            continue;
-                        }
-                        else
-                        {
-                            response = "Fail";
-                            break;
-                        }
+                        response = "Success";
                     }
-
+                    else
+                    {
+                        response = "Fail";
+                    }
                 }
                 c150debug->printf(C150APPLICATION, "Responding with message=\"%s\"",
                                   response.c_str());
@@ -297,7 +295,7 @@ void checksum(char filename[], char shaComputedHash[])
          (buffer->str()).length(), obuf);
     for (i = 0; i < 20; i++)
     {
-        shaComputedHash[i] = (unsigned int)obuf[i];
+        shaComputedHash[i] = (int)obuf[i];
     }
     delete t;
     delete buffer;
