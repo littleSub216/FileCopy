@@ -39,10 +39,9 @@ int main(int argc, char *argv[])
     string response;
     unsigned char shaComputedHash[20]; // hash goes here
     // bool end2endCheck;                 // if the file is identical with the original one
-    const char delim = '#';            //  the delimeter to spilt the incoming message
-    vector<string> incomingfile;       // the recived file
-    DIR *TARGET;               // Unix descriptor for target
-    
+    const char delim = '#';      //  the delimeter to spilt the incoming message
+    vector<string> incomingfile; // the recived file
+    DIR *TARGET;                 // Unix descriptor for target
 
     // grade assignment
     GRADEME(argc, argv);
@@ -145,7 +144,7 @@ int main(int argc, char *argv[])
                 while ((sourceFile = readdir(TARGET)) != NULL)
                 {
                     // skip the file not been generated the checksum
-                    if((strcmp(sourceFile->d_name, incomingfile[0])!= 0))
+                    if ((strcmp(sourceFile->d_name, incomingfile[0]) != 0))
                         continue;
 
                     // skip the . and .. names
@@ -160,11 +159,21 @@ int main(int argc, char *argv[])
                     //
                     // to do :
                     // - check one by one
-                    if(strcmp(incomingfile[1],shaComputedHash) == 0){
-                        response = "Success";
-                    }else{
-                        response = "Fail";
+                    response = "Success";
+                    for (i = 0; i < 20; i++)
+                    {
+                        if (strcmp(incomingfile[1][i], shaComputedHash[i]) == 0)
+                        {
+
+                            continue;
+                        }
+                        else
+                        {
+                            response = "Fail";
+                            break;
+                        }
                     }
+
                 }
                 c150debug->printf(C150APPLICATION, "Responding with message=\"%s\"",
                                   response.c_str());
