@@ -36,6 +36,7 @@ int main(int argc, char *argv[])
     char incomingMessage[512]; // received message data
     int filenastiness;         // packet drop
     int networknastiness;      // corruption on files
+    struct dirent *sourceFile; // Directory entry for source file
     string response;
     unsigned char shaComputedHash[20]; // hash goes here
     // bool end2endCheck;                 // if the file is identical with the original one
