@@ -146,10 +146,8 @@ int main(int argc, char *argv[])
                 while ((sourceFile = readdir(TARGET)) != NULL)
                 {
                     // skip the file not been generated the checksum
-                    string comingchecksum = incomingfile[0];
-                    string generatechecksum;
 
-                    if ((strcmp(sourceFile->d_name, comingchecksum) != 0))
+                    if ((strcmp(sourceFile->d_name, (char*)incomingfile[0]) != 0))
                         continue;
 
                     // skip the . and .. names
@@ -159,13 +157,12 @@ int main(int argc, char *argv[])
 
                     // generate the sha code for inputfile
                     checksum((char *)sourceFile->d_name, (char *)shaComputedHash);
-                    generatechecksum = shaComputedHash;
                     //
                     // begin end-to-end check
                     //
                     // to do :
                     // - check one by one
-                    if (strcmp(comingchecksum, generatechecksum) == 0)
+                    if (strcmp((char *)shaComputedHash,  (char*)incomingfile[1]) == 0)
                     {
 
                         response = "Success";
