@@ -149,13 +149,13 @@ int main(int argc, char *argv[])
             copyFile(argv[sourceDir], sourceFile->d_name, incomingFileDic, nastiness);
 
             // generate the sha code for inputfile
-            checksum((const unsigned char *)sourceFile->d_name, shaComputedHash);
+            checksum((char *)sourceFile->d_name, (char *)shaComputedHash);
             // merge the filename and checksum
             bufferLen = sourceFile->d_namlen + 21; // the lenth of checksum and slash
             bufferMessage = (char *)malloc(bufferLen);
             sourceFile.fread(bufferMessage, 1, sourceFile->d_namlen);
             bufferMessage = bufferMessage + "#";
-            shaComputedHash.fread(bufferMessage, 1, 20);
+            (char)shaComputedHash.fread(bufferMessage, 1, 20);
             // send the filename and checksum
             sock->write(bufferMessage, strlen(bufferMessage) + 1);
             // // send the checksum
@@ -366,12 +366,11 @@ void copyFile(string sourceDir, string fileName, string targetDir, int nastiness
 // ------------------------------------------------------
 void checksum(char filename[], char shaComputedHash[])
 {
-    int i, j;
+    int i;
     ifstream *t;
     stringstream *buffer;
-
     unsigned char obuf[20];
-    printf("SHA1 (\"%s\") = ", filename);
+
     t = new ifstream(filename);
     buffer = new stringstream;
     *buffer << t->rdbuf();
@@ -383,8 +382,6 @@ void checksum(char filename[], char shaComputedHash[])
     }
     delete t;
     delete buffer;
-
-    return 0;
 }
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 //

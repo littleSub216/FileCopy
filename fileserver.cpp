@@ -155,7 +155,7 @@ int main(int argc, char *argv[])
                         continue; // never copy . or ..
 
                     // generate the sha code for inputfile
-                    checksum((const unsigned char *)sourceFile->d_name, shaComputedHash);
+                    checksum((char *)sourceFile->d_name, (char *)shaComputedHash);
                     //
                     // begin end-to-end check
                     //
@@ -283,14 +283,13 @@ int main(int argc, char *argv[])
 // Generate the SHA based on the input files
 //
 // ------------------------------------------------------
-void checksum(char filename[], int length, char shaComputedHash[])
+void checksum(char filename[], char shaComputedHash[])
 {
     int i;
     ifstream *t;
     stringstream *buffer;
-
     unsigned char obuf[20];
-    printf("SHA1 (\"%s\") = ", filename);
+
     t = new ifstream(filename);
     buffer = new stringstream;
     *buffer << t->rdbuf();
@@ -304,11 +303,17 @@ void checksum(char filename[], int length, char shaComputedHash[])
     delete buffer;
 }
 
-// void setUpDebugLogging(const char *logname, int argc, char *argv[])
-// {
-//     // tbc
-// }
-
+void setUpDebugLogging(const char *logname, int argc, char *argv[])
+{
+    // tbc
+}
+// ------------------------------------------------------
+//
+//                   checksum
+//
+// split the coming message by spliiter
+//
+// ------------------------------------------------------
 void split(const string &s, char c,
            vector<string> &v)
 {
