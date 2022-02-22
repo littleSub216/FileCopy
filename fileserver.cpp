@@ -164,7 +164,7 @@ int main(int argc, char *argv[])
                     response = "Success";
                     for (int i = 0; i < 20; i++)
                     {
-                        if (strcmp(incomingfile[1][i], shaComputedHash[i]) == 0)
+                        if (strcmp(incomingfile[1][i], (char *)shaComputedHash[i]) == 0)
                         {
 
                             continue;
