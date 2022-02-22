@@ -29,6 +29,7 @@ void checksum(char filename[], char shaComputedHash[]);
 bool isFile(string fname);
 void checkDirectory(char *dirname);
 void split(const string &s, char c, vector<string> &v);
+void setUpDebugLogging(const char *logname, int argc, char *argv[]);
 
 int main(int argc, char *argv[])
 {
@@ -98,7 +99,7 @@ int main(int argc, char *argv[])
             // Read a packet
             // -1 in size below is to leave room for null
             //
-            readlen = sock->read(incomingfile, sizeof(incomingfile) - 1);
+            readlen = sock->read(incomingMessage, sizeof(incomingMessage) - 1);
             if (readlen == 0)
             {
                 c150debug->printf(C150APPLICATION, "Does not recive the file, trying again");
@@ -161,7 +162,7 @@ int main(int argc, char *argv[])
                     // to do :
                     // - check one by one
                     response = "Success";
-                    for (i = 0; i < 20; i++)
+                    for (int i = 0; i < 20; i++)
                     {
                         if (strcmp(incomingfile[1][i], shaComputedHash[i]) == 0)
                         {
@@ -284,7 +285,7 @@ int main(int argc, char *argv[])
 // ------------------------------------------------------
 void checksum(char filename[], int length, char shaComputedHash[])
 {
-    int i, j;
+    int i;
     ifstream *t;
     stringstream *buffer;
 
