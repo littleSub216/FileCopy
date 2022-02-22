@@ -146,7 +146,7 @@ int main(int argc, char *argv[])
                 while ((sourceFile = readdir(TARGET)) != NULL)
                 {
                     // skip the file not been generated the checksum
-                    if ((strcmp(sourceFile->d_name, incomingfile[0]) != 0))
+                    if ((strcmp(sourceFile->d_name, (const char*)incomingfile[0]) != 0))
                         continue;
 
                     // skip the . and .. names
@@ -164,7 +164,7 @@ int main(int argc, char *argv[])
                     response = "Success";
                     for (int i = 0; i < 20; i++)
                     {
-                        if (strcmp(incomingfile[1][i], (char *)shaComputedHash[i]) == 0)
+                        if (strcmp(incomingfile[1][i], (const char *)shaComputedHash[i]) == 0)
                         {
 
                             continue;
