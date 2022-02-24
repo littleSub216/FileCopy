@@ -200,7 +200,7 @@ int main(int argc, char *argv[])
                 string filename(sourceFile->d_name);
                 requestCheck = filename + "#" + originalchecksum;
                 sock->write(requestCheck.c_str(), strlen(requestCheck.c_str()) + 1);
-                printf("Original checksum is: %s\n", originalchecksum.c_str());
+                printf("Original checksum is: %s\n", requestCheck.c_str());
                 
                 if (readlen == 0)
                 {
