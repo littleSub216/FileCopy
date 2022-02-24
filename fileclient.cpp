@@ -31,6 +31,7 @@ bool isFile(string fname);
 void checkDirectory(char *dirname);
 void checksum(char filename[], unsigned char shaComputedHash[]);
 string convertToString(unsigned char* a);
+void setUpDebugLogging(const char *logname, int argc, char *argv[]);
 
     int main(int argc, char *argv[])
 {
@@ -43,8 +44,8 @@ string convertToString(unsigned char* a);
     ssize_t readlen;           // amount of data read from socket
     char incomingFileDic[512]; // received message data
 
-    stirng requestCopy;       // request the server to copy file
-    char shaComputedHash[20]; // hash goes here
+    string requestCopy;       // request the server to copy file
+    unsigned char shaComputedHash[20]; // hash goes here
     char *bufferMessage;      // store the filename and checksum
     size_t bufferLen;
     string originalchecksum;
@@ -148,14 +149,14 @@ string convertToString(unsigned char* a);
             // do the copy -- this will check for and
             // skip subdirectories
 
-            copyFile(argv[sourceDir], sourceFile->d_name, incomingFileDic, nastiness);
+            copyFile(argv[sourceDir], sourceFile->d_name, incomingFileDic, filenastiness);
 
             // generate the sha code for inputfile
             checksum((char *)sourceFile->d_name, shaComputedHash);
             // merge the filename and checksum
             bufferLen = sourceFile->d_namlen + 21; // the lenth of checksum and slash
             bufferMessage = (char *)malloc(bufferLen);
-            sourceFile.fread(bufferMessage, 1, sourceFile->d_namlen);
+            sourceFile.fread(bufferMessage, 1, sourceFile->d_namlen );
             bufferMessage = bufferMessage + "#";
             // checksum to sstring
             originalchecksum = convertToString(shaComputedHash);
