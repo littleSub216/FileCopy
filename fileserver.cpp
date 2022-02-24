@@ -85,6 +85,8 @@ int main(int argc, char *argv[])
     //
     //  Set up debug message logging
     //
+    printf("network nastiness is set to: %d\n", networknastiness);
+    printf("file nastiness is set to: %d\n", filenastiness);
     setUpDebugLogging("fileserverdebug.txt", argc, argv);
 
     //
