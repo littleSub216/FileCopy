@@ -70,16 +70,16 @@ int main(int argc, char *argv[])
             exit(1);
         }
 
-        if (strspn(argv[3], "0123456789") != strlen(argv[1]))
+        if (strspn(argv[3], "0123456789") != strlen(argv[3]))
         {
-            fprintf(stderr, "NetworkNastiness %s is not numeric\n", argv[1]);
+            fprintf(stderr, "NetworkNastiness %s is not numeric\n", argv[3]);
             fprintf(stderr, "Correct syntxt is: %s <server> <networknastiness> <filenastiness> <srcdir>\n", argv[0]);
             exit(4);
         }
 
-        if (strspn(argv[4], "0123456789") != strlen(argv[2]))
+        if (strspn(argv[4], "0123456789") != strlen(argv[4]))
         {
-            fprintf(stderr, "FileNastiness %s is not numeric\n", argv[1]);
+            fprintf(stderr, "FileNastiness %s is not numeric\n", argv[4]);
             fprintf(stderr, "Correct syntxt is: %s <server> <networknastiness> <filenastiness> <srcdir>\n", argv[0]);
             exit(4);
         }

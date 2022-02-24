@@ -60,14 +60,14 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-    if (strspn(argv[2], "0123456789") != strlen(argv[1]))
+    if (strspn(argv[2], "0123456789") != strlen(argv[2]))
     {
         fprintf(stderr, "NetworkNastiness %s is not numeric\n", argv[1]);
         fprintf(stderr, "Correct syntxt is: %s <networknastiness> <filenastiness> <targetdir>\n", argv[0]);
         exit(4);
     }
 
-    if (strspn(argv[3], "0123456789") != strlen(argv[2]))
+    if (strspn(argv[3], "0123456789") != strlen(argv32]))
     {
         fprintf(stderr, "FileNastiness %s is not numeric\n", argv[1]);
         fprintf(stderr, "Correct syntxt is: %s <networknastiness> <filenastiness> <targetdir>\n", argv[0]);
