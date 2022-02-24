@@ -46,7 +46,7 @@ int main(int argc, char *argv[])
 
     string requestCopy;                // request the server to copy file
     unsigned char shaComputedHash[20]; // hash goes here
-    char *bufferMessage;               // store the filename and checksum
+    // char *bufferMessage;               // store the filename and checksum
     string originalchecksum;
     string requestCheck;
     //
@@ -160,10 +160,10 @@ int main(int argc, char *argv[])
             // bufferMessage = bufferMessage + "#";
             // checksum to sstring
             originalchecksum = convertToString(shaComputedHash);
-            requestCheck = sourceFile->d_namlen + "#" + originalchecksum;
+            requestCheck = sourceFile->d_name + "#" + originalchecksum;
             // originalchecksum.fread(bufferMessage, 1, 20);
             // send the filename and checksum
-            sock->write(requestCheck, strlen(requestCheck) + 1);
+            sock->write(requestCheck.c_str(), strlen(requestCheck.c_str()) + 1);
             // // send the checksum
             // sock->write(ushaComputedHashns, strlen(shaComputedHash) + 1);
         }
