@@ -27,7 +27,6 @@ void checksum(char filename[], unsigned char shaComputedHash[]);
 // void copyFile(string sourceDir, string fileName, string targetDir, int nastiness); // fwd decl
 bool isFile(string fname);
 void checkDirectory(char *dirname);
-void split(const string &s, char c, vector<string> &v);
 void setUpDebugLogging(const char *logname, int argc, char *argv[]);
 string convertToString(unsigned char* a);
 
@@ -295,7 +294,7 @@ void checksum(char filename[], unsigned char shaComputedHash[])
     t = new ifstream(filename);
     buffer = new stringstream;
     *buffer << t->rdbuf();
-    SHA1(buffer->str().c_str(),
+    SHA1((const unsigned char *)buffer->str().c_str(),
          (buffer->str()).length(), obuf);
     for (i = 0; i < 20; i++)
     {
