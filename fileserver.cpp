@@ -22,6 +22,7 @@
 #include <iostream> // for cout
 #include <fstream>  // for input files
 #include <openssl/sha.h>
+#include <vector>
 
 
 using namespace std;         // for C++ std library
@@ -165,7 +166,7 @@ int main(int argc, char *argv[])
                 string filename = splitinput[0];
                 string originalchecksum = splitinput[1];
 
-                whiel((sourceFile = readdir(TARGET)) != NULL)
+                while((sourceFile = readdir(TARGET)) != NULL)
                 {
                     // compare string
                     // skip the file not been generated the checksum
