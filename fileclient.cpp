@@ -116,7 +116,7 @@ int main(int argc, char *argv[])
 
         // Create the socket
         c150debug->printf(C150APPLICATION, "Creating C150DgmSocket");
-        C150DgmSocket *sock = new C150DgmSocket(networkNastiness);
+        C150DgmSocket *sock = new C150DgmSocket(networknastiness);
 
         // Tell the DGMSocket which server to talk to
         sock->setServerName(argv[serverArg]);
