@@ -21,7 +21,6 @@
 #include <sstream>
 #include <stdio.h>
 #include <openssl/sha.h>
-#include <iostream>
 
 using namespace std;
 
@@ -31,6 +30,7 @@ int main(int argc, char *argv[])
   ifstream *t;
   stringstream *buffer;
   string out;
+  ostringstream os;
 
   unsigned char obuf[20];
   
@@ -50,7 +50,8 @@ int main(int argc, char *argv[])
 		for (i = 0; i < 20; i++)
 		{
 			// printf ("%02x", (unsigned int) obuf[i]);
-			out += obuf[i].str();
+			os<<ui;
+			out += os.str();
 		}
 		printf(out.c_str());
 		printf ("\n");
