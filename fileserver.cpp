@@ -150,7 +150,8 @@ int main(int argc, char *argv[])
             //
             if (incoming.compare("SRC") == 0 )
             {
-                response(argv[3]); // return the target directory
+                
+                response = argv[3]; // return the target directory
             }
             else
             {
