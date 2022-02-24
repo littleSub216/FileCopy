@@ -70,22 +70,22 @@ int main(int argc, char *argv[])
             exit(1);
         }
 
+        if (strspn(argv[2], "0123456789") != strlen(argv[2]))
+        {
+            fprintf(stderr, "NetworkNastiness %s is not numeric\n", argv[2]);
+            fprintf(stderr, "Correct syntxt is: %s <server> <networknastiness> <filenastiness> <srcdir>\n", argv[0]);
+            exit(4);
+        }
+
         if (strspn(argv[3], "0123456789") != strlen(argv[3]))
         {
-            fprintf(stderr, "NetworkNastiness %s is not numeric\n", argv[3]);
+            fprintf(stderr, "FileNastiness %s is not numeric\n", argv[3]);
             fprintf(stderr, "Correct syntxt is: %s <server> <networknastiness> <filenastiness> <srcdir>\n", argv[0]);
             exit(4);
         }
 
-        if (strspn(argv[4], "0123456789") != strlen(argv[4]))
-        {
-            fprintf(stderr, "FileNastiness %s is not numeric\n", argv[4]);
-            fprintf(stderr, "Correct syntxt is: %s <server> <networknastiness> <filenastiness> <srcdir>\n", argv[0]);
-            exit(4);
-        }
-
-        filenastiness = atoi(argv[4]); // convert command line string to integer
-        networknastiness = atoi(argv[3]);
+        filenastiness = atoi(argv[3]); // convert command line string to integer
+        networknastiness = atoi(argv[2]);
 
         printf("network nastiness is set to: %d\n", networknastiness);
         printf("file nastiness is set to: %d\n", filenastiness);
