@@ -25,7 +25,6 @@ using namespace C150NETWORK; // for all the comp150 utilities
 const int TargetDir = 3; // target directory name is 3th arg
 
 void checksum(char filename[], unsigned char shaComputedHash[]);
-// void copyFile(string sourceDir, string fileName, string targetDir, int nastiness); // fwd decl
 bool isFile(string fname);
 void checkDirectory(char *dirname);
 void setUpDebugLogging(const char *logname, int argc, char *argv[]);
