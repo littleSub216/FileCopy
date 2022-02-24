@@ -89,6 +89,6 @@ fileserver: fileserver.cpp  $(C150AR) $(INCLUDES)
 # for forcing complete rebuild#
 
 clean:
-	 rm -f nastyfiletest sha1test makedatafile fileserver fileclient *.o 
+	 rm -f nastyfiletest sha1test makedatafile fileclient fileserver *.o 
 
 
