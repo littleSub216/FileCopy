@@ -148,20 +148,15 @@ int main(int argc, char *argv[])
                 }
                 //// split the incomingmessage by delim
                 splitinput = split(incomingMessage, delim);
-                string file = splitinput[0];
+
+                string filename = splitinput[0];
                 string originalchecksum = splitinput[1];
-
-                char[] filename = file.toCharArray();
-                char[] originalchecksum = original.toCharArray();
-
-                
-
 
                 while ((sourceFile = readdir(TARGET)) != NULL)
                 {
                     // compare string
                     // skip the file not been generated the checksum
-                    if ((strcmp(sourceFile->d_name, filename) != 0))
+                    if ((strcmp(sourceFile->d_name, filename.toCharArray()) != 0))
                         continue;
 
                     // skip the . and .. names
@@ -170,7 +165,7 @@ int main(int argc, char *argv[])
                         continue; // never copy . or ..
 
                     // generate the sha code for inputfile
-                    checksum((char *)sourceFile->d_name, shaComputedHash);
+                    checksum((char *)sourceFile->d_name, shaComputedHash.toCharArray());
                     //
                     // begin end-to-end check
                     //
