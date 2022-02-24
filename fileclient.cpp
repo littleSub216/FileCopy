@@ -30,10 +30,10 @@ void copyFile(string sourceDir, string fileName, string targetDir, int nastiness
 bool isFile(string fname);
 void checkDirectory(char *dirname);
 void checksum(char filename[], unsigned char shaComputedHash[]);
-string convertToString(unsigned char* a);
+string convertToString(unsigned char *a);
 void setUpDebugLogging(const char *logname, int argc, char *argv[]);
 
-    int main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
     int networknastiness;
     int filenastiness;
@@ -44,9 +44,9 @@ void setUpDebugLogging(const char *logname, int argc, char *argv[]);
     ssize_t readlen;           // amount of data read from socket
     char incomingFileDic[512]; // received message data
 
-    string requestCopy;       // request the server to copy file
+    string requestCopy;                // request the server to copy file
     unsigned char shaComputedHash[20]; // hash goes here
-    char *bufferMessage;      // store the filename and checksum
+    char *bufferMessage;               // store the filename and checksum
     size_t bufferLen;
     string originalchecksum;
     //
@@ -97,7 +97,7 @@ void setUpDebugLogging(const char *logname, int argc, char *argv[]);
         // Send the message to the server
         c150debug->printf(C150APPLICATION, "%s: Writing message: \"%s\"",
                           argv[0], requestCopy);
-        sock->write(requestCopy, strlen(requestCopy) + 1); // +1 includes the null
+        sock->write(requestCopy, strlen(requestCopy.c_str()) + 1); // +1 includes the null
 
         // Read the response from the server
         c150debug->printf(C150APPLICATION, "%s: Returned from write, doing read()",
@@ -156,7 +156,7 @@ void setUpDebugLogging(const char *logname, int argc, char *argv[]);
             // merge the filename and checksum
             bufferLen = sourceFile->d_namlen + 21; // the lenth of checksum and slash
             bufferMessage = (char *)malloc(bufferLen);
-            sourceFile.fread(bufferMessage, 1, sourceFile->d_namlen );
+            sourceFile.fread(bufferMessage, 1, sourceFile->d_namlen);
             bufferMessage = bufferMessage + "#";
             // checksum to sstring
             originalchecksum = convertToString(shaComputedHash);
@@ -170,22 +170,21 @@ void setUpDebugLogging(const char *logname, int argc, char *argv[]);
             // free the message file
             free(bufferMessage);
         }
+        closedir(SRC);
     }
-    closedir(SRC);
-}
-//
-//  Handle networking errors -- for now, just print message and give up!
-//
-catch (C150NetworkException &e)
-{
-    // Write to debug log
-    c150debug->printf(C150ALWAYSLOG, "Caught C150NetworkException: %s\n",
-                      e.formattedExplanation().c_str());
-    // In case we're logging to a file, write to the console too
-    cerr << argv[0] << ": caught C150NetworkException: " << e.formattedExplanation()
-         << endl;
-}
-return 0;
+    //
+    //  Handle networking errors -- for now, just print message and give up!
+    //
+    catch (C150NetworkException &e)
+    {
+        // Write to debug log
+        c150debug->printf(C150ALWAYSLOG, "Caught C150NetworkException: %s\n",
+                          e.formattedExplanation().c_str());
+        // In case we're logging to a file, write to the console too
+        cerr << argv[0] << ": caught C150NetworkException: " << e.formattedExplanation()
+             << endl;
+    }
+    return 0;
 }
 
 // ------------------------------------------------------
@@ -380,7 +379,7 @@ void checksum(char filename[], unsigned char shaComputedHash[])
     t = new ifstream(filename);
     buffer = new stringstream;
     *buffer << t->rdbuf();
-    SHA1(buffer->str().c_str(),
+    SHA1((const unsigned char *)buffer->str().c_str(),
          (buffer->str()).length(), obuf);
     for (i = 0; i < 20; i++)
     {
