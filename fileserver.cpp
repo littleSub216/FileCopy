@@ -1,12 +1,17 @@
-
-//    Command line:
+// --------------------------------------------------------------
 //
-//         fileserver <networknastiness> <filenastiness> <targetdir>
+//
+//
+//        COMMAND LINE
+//
+//              fileserver <networknastiness> <filenastiness> <targetdir>
+//
+// --------------------------------------------------------------
 
 #include "c150nastydgmsocket.h"
-#include "c150nastyfile.h" // for c150nastyfile & framework
-#include "c150grading.h"
 #include "c150debug.h"
+#include <fstream>
+#include <cstdlib>
 #include <dirent.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -16,74 +21,82 @@
 #include <cstring>  // for strerro
 #include <iostream> // for cout
 #include <fstream>  // for input files
-#include <openssl/sha.h>
-#include <vector>
 
 using namespace std;         // for C++ std library
 using namespace C150NETWORK; // for all the comp150 utilities
 
-const int TargetDir = 3; // target directory name is 3th arg
-
-void checksum(char filename[], unsigned char shaComputedHash[]);
-bool isFile(string fname);
-void checkDirectory(char *dirname);
 void setUpDebugLogging(const char *logname, int argc, char *argv[]);
-string convertToString(unsigned char *a);
-vector<string> split(string s, string delimiter);
+void checksum(char filename[], unsigned char shaComputedHash[]); // generate checksum
+string convertToString(unsigned char *a);                        // convert sha to string
+vector<string> split(string s, string delimiter);                // split the incoming message
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+//
+//                           main program
+//
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 int main(int argc, char *argv[])
 {
+
+    //
+    // Variable declarations
+    //
     ssize_t readlen;           // amount of data read from socket
     char incomingMessage[512]; // received message data
-    int filenastiness;         // packet drop
-    int networknastiness;      // corruption on files
-    struct dirent *sourceFile; // Directory entry for source file
+    int networknastiness;      // how aggressively do we drop packets
+    int filenastiness;         //corruption during the read and write
+    string response;
 
     unsigned char shaComputedHash[20]; // hash goes here
-    // bool end2endCheck;                 // if the file is identical with the original one
-    string delim = "#"; //  the delimeter to spilt the incoming message
-    DIR *TARGET;
-    // Unix descriptor for target
-    vector<string> splitinput;
-    string response;
     string generatechecksum;
 
-    // grade assignment
-    GRADEME(argc, argv);
+    vector<string> splitinput;
+    string delim = "#"; //  the delimeter to spilt the incoming message
+    DIR *TARGET;
+    struct dirent *sourceFile; // Directory entry for source file
 
     //
     // Check command line and parse arguments
     //
     if (argc != 4)
     {
-        fprintf(stderr, "Correct syntxt is: %s<networknastiness> <filenastiness> <targetdir>\n", argv[0]);
+        fprintf(stderr, "Correct syntxt is: %s <networknastiness> <filenastiness> <targetdir>\n", argv[0]);
         exit(1);
     }
-
     if (strspn(argv[1], "0123456789") != strlen(argv[1]))
     {
-        fprintf(stderr, "NetworkNastiness %s is not numeric\n", argv[1]);
+        fprintf(stderr, "networknastiness %s is not numeric\n", argv[1]);
         fprintf(stderr, "Correct syntxt is: %s <networknastiness> <filenastiness> <targetdir>\n", argv[0]);
         exit(4);
     }
+    networknastiness = atoi(argv[1]); // convert command line string to integer
 
-    if (strspn(argv[2], "0123456789") != strlen(argv[2]))
+    if (strspn(argv[2], "0123456789") != strlen(argv[1]))
     {
-        fprintf(stderr, "FileNastiness %s is not numeric\n", argv[1]);
+        fprintf(stderr, "filenastiness %s is not numeric\n", argv[1]);
         fprintf(stderr, "Correct syntxt is: %s <networknastiness> <filenastiness> <targetdir>\n", argv[0]);
         exit(4);
     }
-
     filenastiness = atoi(argv[2]); // convert command line string to integer
-    networknastiness = atoi(argv[1]);
-
-    printf("network nastiness is set to: %d\n", networknastiness);
-    printf("file nastiness is set to: %d\n", filenastiness);
-
     //
     //  Set up debug message logging
     //
-    setUpDebugLogging("serverdebug.txt", argc, argv);
+    setUpDebugLogging("fileserverdebug.txt", argc, argv);
+
+    //
+    // We set a debug output indent in the server only, not the client.
+    // That way, if we run both programs and merge the logs this way:
+    //
+    //    cat pingserverdebug.txt pingserverclient.txt | sort
+    //
+    // it will be easy to tell the server and client entries apart.
+    //
+    // Note that the above trick works because at the start of each
+    // log entry is a timestamp that sort will indeed arrange in
+    // timestamp order, thus merging the logs by time across
+    // server and client.
+    //
     c150debug->setIndent("    "); // if we merge client and server
     // logs, server stuff will be indented
 
@@ -92,6 +105,7 @@ int main(int argc, char *argv[])
     //
     try
     {
+        //
         // Create the socket
         //
         c150debug->printf(C150APPLICATION, "Creating C150NastyDgmSocket(nastiness=%d)",
@@ -99,8 +113,12 @@ int main(int argc, char *argv[])
         C150DgmSocket *sock = new C150NastyDgmSocket(networknastiness);
         c150debug->printf(C150APPLICATION, "Ready to accept messages");
 
+        //
+        // infinite loop processing messages
+        //
         while (1)
         {
+
             //
             // Read a packet
             // -1 in size below is to leave room for null
@@ -108,7 +126,7 @@ int main(int argc, char *argv[])
             readlen = sock->read(incomingMessage, sizeof(incomingMessage) - 1);
             if (readlen == 0)
             {
-                c150debug->printf(C150APPLICATION, "Does not recive the file, trying again");
+                c150debug->printf(C150APPLICATION, "Read zero length message, trying again");
                 continue;
             }
 
@@ -127,56 +145,37 @@ int main(int argc, char *argv[])
             //
             //  create the message to return
             //
-            if (strspn(incomingMessage, "0123456789") == strlen(incomingMessage))
+            if (incoming.compare("SRC") == 0 )
             {
-                // check the argument of incmoing messgae is 1 return the filename
-                response = argv[TargetDir];
+                response(argv[3]); // return the target directory
             }
-
             else
-            { // check the argument of incmoing messgae is 1 return the filename
-                // recived the sha of file
-                //
-                // Loop copying the files
-                //
-                // copyfile takes name of target file
-                //
-
-                TARGET = opendir(argv[TargetDir]);
+            {
+                TARGET = opendir(argv[3]);
                 if (TARGET == NULL)
                 {
-                    fprintf(stderr, "Error opening target directory %s \n", argv[TargetDir]);
+                    fprintf(stderr, "Error opening target directory %s \n", argv[3]);
                     exit(8);
                 }
-                //// split the incomingmessage by delim
-                splitinput = split(incomingMessage, delim);
 
+                // end to end check
+                splitinput = split(incoming, delim);
                 string filename = splitinput[0];
                 string originalchecksum = splitinput[1];
 
-                while ((sourceFile = readdir(TARGET)) != NULL)
+                whiel((sourceFile = readdir(TARGET)) != NULL)
                 {
                     // compare string
                     // skip the file not been generated the checksum
                     if ((strcmp(sourceFile->d_name, filename.c_str()) != 0))
+                    {
                         continue;
-
-                    // skip the . and .. names
-                    if ((strcmp(sourceFile->d_name, ".") == 0) ||
-                        (strcmp(sourceFile->d_name, "..") == 0))
-                        continue; // never copy . or ..
+                    }
 
                     // generate the sha code for inputfile
                     checksum((char *)sourceFile->d_name, shaComputedHash);
-                    //
-                    // begin end-to-end check
-                    //
-                    // to do :
-                    // - check one by one
-                    // checksum to string
-
                     generatechecksum = convertToString(shaComputedHash);
-                    if (generatechecksum.compare(originalchecksum.c_str()) == 0)
+                    if (generatechecksum.compare(originalchecksum) == 0)
                     {
 
                         response = "Success";
@@ -186,11 +185,7 @@ int main(int argc, char *argv[])
                         response = "Fail";
                     }
                 }
-                c150debug->printf(C150APPLICATION, "Responding with message=\"%s\"",
-                                  response.c_str());
-                sock->write(response.c_str(), response.length() + 1);
             }
-
             //
             // write the return message
             //
@@ -199,6 +194,7 @@ int main(int argc, char *argv[])
             sock->write(response.c_str(), response.length() + 1);
         }
     }
+
     catch (C150NetworkException &e)
     {
         // Write to debug log
@@ -210,106 +206,6 @@ int main(int argc, char *argv[])
 
     // This only executes if there was an error caught above
     return 4;
-}
-
-// ------------------------------------------------------
-//
-//                   makeFileName
-//
-// Put together a directory and a file name, making
-// sure there's a / in between
-//
-// ------------------------------------------------------
-
-// string
-// makeFileName(string dir, string name)
-// {
-//     stringstream ss;
-
-//     ss << dir;
-//     // make sure dir name ends in /
-//     if (dir.substr(dir.length() - 1, 1) != "/")
-//         ss << '/';
-//     ss << name;      // append file name to dir
-//     return ss.str(); // return dir/name
-// }
-
-// ------------------------------------------------------
-//
-//                   checkDirectory
-//
-//  Make sure directory exists
-//
-// ------------------------------------------------------
-
-// void checkDirectory(char *dirname)
-// {
-//     struct stat statbuf;
-//     if (lstat(dirname, &statbuf) != 0)
-//     {
-//         fprintf(stderr, "Error stating supplied source directory %s\n", dirname);
-//         exit(8);
-//     }
-
-//     if (!S_ISDIR(statbuf.st_mode))
-//     {
-//         fprintf(stderr, "File %s exists but is not a directory\n", dirname);
-//         exit(8);
-//     }
-// }
-
-// ------------------------------------------------------
-//
-//                   isFile
-//
-//  Make sure the supplied file is not a directory or
-//  other non-regular file.
-//
-// ------------------------------------------------------
-
-// bool isFile(string fname)
-// {
-//     const char *filename = fname.c_str();
-//     struct stat statbuf;
-//     if (lstat(filename, &statbuf) != 0)
-//     {
-//         fprintf(stderr, "isFile: Error stating supplied source file %s\n", filename);
-//         return false;
-//     }
-
-//     if (!S_ISREG(statbuf.st_mode))
-//     {
-//         fprintf(stderr, "isFile: %s exists but is not a regular file\n", filename);
-//         return false;
-//     }
-//     return true;
-// }
-
-// ------------------------------------------------------
-//
-//                   checksum
-//
-// Generate the SHA based on the input files
-//
-// ------------------------------------------------------
-void checksum(char filename[], unsigned char shaComputedHash[])
-{
-    int i;
-    ifstream *t;
-    stringstream *buffer;
-    unsigned char obuf[20];
-
-    t = new ifstream(filename);
-    buffer = new stringstream;
-    *buffer << t->rdbuf();
-    SHA1((const unsigned char *)buffer->str().c_str(),
-         (buffer->str()).length(), obuf);
-    for (i = 0; i < 20; i++)
-    {
-        shaComputedHash[i] = (unsigned int)obuf[i];
-    }
-    delete t;
-    delete buffer;
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -391,6 +287,32 @@ void setUpDebugLogging(const char *logname, int argc, char *argv[])
                              C150NETWORKDELIVERY);
 }
 
+// ------------------------------------------------------
+//
+//                   checksum
+//
+// Generate the SHA based on the input files
+//
+// ------------------------------------------------------
+void checksum(char filename[], unsigned char shaComputedHash[])
+{
+    int i;
+    ifstream *t;
+    stringstream *buffer;
+    unsigned char obuf[20];
+
+    t = new ifstream(filename);
+    buffer = new stringstream;
+    *buffer << t->rdbuf();
+    SHA1((const unsigned char *)buffer->str().c_str(),
+         (buffer->str()).length(), obuf);
+    for (i = 0; i < 20; i++)
+    {
+        shaComputedHash[i] = (unsigned int)obuf[i];
+    }
+    delete t;
+    delete buffer;
+}
 // ------------------------------------------------------
 //
 //                   string tools

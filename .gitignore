@@ -3,3 +3,5 @@ Tufts CS 117 Assignment -.pdf
 .vscode/settings.json
 .gitignore
 workspace.code-workspace
+fileclient2.cpp
+fileserver2.cpp
