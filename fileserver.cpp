@@ -149,7 +149,7 @@ int main(int argc, char *argv[])
                 //// split the incomingmessage by delim
                 splitinput = split(incomingMessage, delim);
                 string filename = splitinput[0];
-                string originalchecksum = splitinput[1]''
+                string originalchecksum = splitinput[1];
 
                 while ((sourceFile = readdir(TARGET)) != NULL)
                 {
