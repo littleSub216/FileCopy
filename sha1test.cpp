@@ -23,7 +23,7 @@
 #include <openssl/sha.h>
 
 using namespace std;
-
+string convertToString(unsigned char *a);
 int main(int argc, char *argv[])
 {
   int i, j;
