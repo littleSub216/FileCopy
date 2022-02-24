@@ -42,7 +42,7 @@ int main(int argc, char *argv[])
 
     unsigned char shaComputedHash[20]; // hash goes here
     // bool end2endCheck;                 // if the file is identical with the original one
-    string delim = '#'; //  the delimeter to spilt the incoming message
+    string delim = "#"; //  the delimeter to spilt the incoming message
     DIR *TARGET;
     // Unix descriptor for target
     vector<string> splitinput;
