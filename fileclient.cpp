@@ -111,16 +111,16 @@ int main(int argc, char *argv[])
         //
         // Make sure source and target dirs exist
         //
-        checkDirectory(argv[sourceDir]);
+        checkDirectory(argv[4]);
         checkDirectory(incomingFileDic);
 
         //
         // Open the source directory
         //
-        SRC = opendir(argv[sourceDir]);
+        SRC = opendir(argv[4]);
         if (SRC == NULL)
         {
-            fprintf(stderr, "Error opening source directory %s\n", argv[sourceDir]);
+            fprintf(stderr, "Error opening source directory %s\n", argv[4]);
             exit(8);
         }
 
