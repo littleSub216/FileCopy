@@ -155,7 +155,7 @@ int main(int argc, char *argv[])
                 {
                     // compare string
                     // skip the file not been generated the checksum
-                    if ((strcmp(sourceFile->d_name, splitinput[0]) != 0))
+                    if ((strcmp(sourceFile->d_name, filename) != 0))
                         continue;
 
                     // skip the . and .. names
@@ -173,7 +173,7 @@ int main(int argc, char *argv[])
                     // checksum to string
 
                     generatechecksum = convertToString(shaComputedHash);
-                    if (generatechecksum.compare(splitinput[1]) == 0)
+                    if (generatechecksum.compare(originalchecksum) == 0)
                     {
 
                         response = "Success";
