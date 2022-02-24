@@ -77,6 +77,9 @@ int main(int argc, char *argv[])
 
     filenastiness = atoi(argv[2]); // convert command line string to integer
     networknastiness = atoi(argv[1]);
+    
+    printf("network nastiness is set to: %d\n", networkNastiness);
+    printf("file nastiness is set to: %d\n", fileNastiness);
 
     //
     //  Set up debug message logging
