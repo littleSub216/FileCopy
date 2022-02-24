@@ -41,7 +41,7 @@ int main(int argc, char *argv[])
     DIR *TARGET;               // Unix descriptor for target
     struct dirent *sourceFile; // Directory entry for source file
 
-    ssize_t readlen;           // amount of data read from socket
+    // ssize_t readlen;           // amount of data read from socket
     char incomingFileDic[512]; // received message data
 
     string requestCopy;                // request the server to copy file
@@ -85,6 +85,9 @@ int main(int argc, char *argv[])
 
         filenastiness = atoi(argv[3]); // convert command line string to integer
         networknastiness = atoi(argv[2]);
+
+        printf("network nastiness is set to: %d\n", networknastiness);
+        printf("file nastiness is set to: %d\n", filenastiness);
 
         // recieve the target directory
         // Create the socket
