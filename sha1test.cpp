@@ -29,8 +29,10 @@ int main(int argc, char *argv[])
   int i, j;
   ifstream *t;
   stringstream *buffer;
+  string out;
 
   unsigned char obuf[20];
+  
 
   if (argc < 2) 	{
 		fprintf (stderr, "usage: %s file [file...]\n", argv[0]);
@@ -46,11 +48,20 @@ int main(int argc, char *argv[])
 		     (buffer->str()).length(), obuf);
 		for (i = 0; i < 20; i++)
 		{
-			printf ("%02x", (unsigned int) obuf[i]);
+			// printf ("%02x", (unsigned int) obuf[i]);
+			out += convertToString(obuf[i]);
 		}
+		printf(out);
 		printf ("\n");
 		delete t;
 		delete buffer;
   }
   return 0;
+}
+
+string convertToString(unsigned char *a)
+{
+    string s(reinterpret_cast<char *>(a));
+
+    return s;
 }
