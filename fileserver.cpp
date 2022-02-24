@@ -54,28 +54,28 @@ int main(int argc, char *argv[])
     //
     // Check command line and parse arguments
     //
-    if (argc != 3)
+    if (argc != 4)
     {
         fprintf(stderr, "Correct syntxt is: %s<networknastiness> <filenastiness> <targetdir>\n", argv[0]);
         exit(1);
     }
 
-    if (strspn(argv[1], "0123456789") != strlen(argv[1]))
+    if (strspn(argv[2], "0123456789") != strlen(argv[1]))
     {
         fprintf(stderr, "NetworkNastiness %s is not numeric\n", argv[1]);
         fprintf(stderr, "Correct syntxt is: %s <networknastiness> <filenastiness> <targetdir>\n", argv[0]);
         exit(4);
     }
 
-    if (strspn(argv[2], "0123456789") != strlen(argv[2]))
+    if (strspn(argv[3], "0123456789") != strlen(argv[2]))
     {
         fprintf(stderr, "FileNastiness %s is not numeric\n", argv[1]);
         fprintf(stderr, "Correct syntxt is: %s <networknastiness> <filenastiness> <targetdir>\n", argv[0]);
         exit(4);
     }
 
-    filenastiness = atoi(argv[2]); // convert command line string to integer
-    networknastiness = atoi(argv[1]);
+    filenastiness = atoi(argv[3]); // convert command line string to integer
+    networknastiness = atoi(argv[2]);
 
     printf("network nastiness is set to: %d\n", networknastiness);
     printf("file nastiness is set to: %d\n", filenastiness);
