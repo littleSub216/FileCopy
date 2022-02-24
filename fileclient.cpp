@@ -23,6 +23,8 @@
 #include <cstring>  // for strerro
 #include <iostream> // for cout
 #include <fstream>  // for input files
+#include <openssl/sha.h>
+
 
 using namespace std;         // for C++ std library
 using namespace C150NETWORK; // for all the comp150 utilities
@@ -151,7 +153,7 @@ int main(int argc, char *argv[])
         if (incoming.compare("TARGET") == 0)
         {
             checkDirectory(argv[4]);
-            checkDirectory(incoming.c_str());
+            checkDirectory(incomingMessage);
             //
             // Open the source directory
             //
@@ -203,7 +205,6 @@ int main(int argc, char *argv[])
                 {
                     c150debug->printf(C150APPLICATION, "Read zero length message, trying again");
                     retry++;
-                    continue;
                 }
                 //
                 // Clean up the message in case it contained junk
@@ -219,7 +220,7 @@ int main(int argc, char *argv[])
                 }else if(retry < 5){
                     retry ++;
                 }else{
-                    printf('Fail 5 times');
+                    printf("Fail 5 times");
                     exit(0);
                 }
             }

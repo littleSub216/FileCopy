@@ -21,6 +21,8 @@
 #include <cstring>  // for strerro
 #include <iostream> // for cout
 #include <fstream>  // for input files
+#include <openssl/sha.h>
+
 
 using namespace std;         // for C++ std library
 using namespace C150NETWORK; // for all the comp150 utilities
