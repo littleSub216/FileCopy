@@ -148,11 +148,14 @@ int main(int argc, char *argv[])
                 }
                 //// split the incomingmessage by delim
                 splitinput = split(incomingMessage, delim);
-                char[] filename = splitinput[0].toCharArray();
-                char[] originalchecksum = splitinput[1].toCharArray();
+                string file = splitinput[0];
+                string originalchecksum = splitinput[1];
 
-                // string originalchecksum = splitinput[1];
+                char[] filename = file.toCharArray();
+                char[] originalchecksum = original.toCharArray();
+
                 
+
 
                 while ((sourceFile = readdir(TARGET)) != NULL)
                 {
