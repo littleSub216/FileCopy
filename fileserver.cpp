@@ -39,11 +39,13 @@ int main(int argc, char *argv[])
     int networknastiness;      // corruption on files
     struct dirent *sourceFile; // Directory entry for source file
     string response;
-    unsigned char shaComputedHash[20]; // hash goes here
+    char shaComputedHash[20]; // hash goes here
     // bool end2endCheck;                 // if the file is identical with the original one
     const char delim = '#';      //  the delimeter to spilt the incoming message
     vector<string> incomingfile; // the recived file
     DIR *TARGET;                 // Unix descriptor for target
+
+    string generatechecksum;
 
     // grade assignment
     GRADEME(argc, argv);
@@ -162,7 +164,8 @@ int main(int argc, char *argv[])
                     //
                     // to do :
                     // - check one by one
-                    if (strcmp((char *)shaComputedHash,  (char*)incomingfile[1]) == 0)
+                    generatechecksum = convertToString(shaComputedHash);
+                    if (generatechecksum.compare(incomingfile[1])) == 0)
                     {
 
                         response = "Success";
@@ -283,12 +286,12 @@ void checksum(char filename[], char shaComputedHash[])
     int i;
     ifstream *t;
     stringstream *buffer;
-    unsigned char obuf[20];
+    char obuf[20];
 
     t = new ifstream(filename);
     buffer = new stringstream;
     *buffer << t->rdbuf();
-    SHA1((const unsigned char *)buffer->str().c_str(),
+    SHA1(buffer->str().c_str(),
          (buffer->str()).length(), obuf);
     for (i = 0; i < 20; i++)
     {
@@ -304,11 +307,13 @@ void setUpDebugLogging(const char *logname, int argc, char *argv[])
 }
 // ------------------------------------------------------
 //
-//                   checksum
+//                   string tools
 //
-// split the coming message by spliiter
+// modified the strings
 //
 // ------------------------------------------------------
+
+
 void split(const string &s, char c,
            vector<string> &v)
 {
@@ -324,4 +329,11 @@ void split(const string &s, char c,
         if (j == string::npos)
             v.push_back(s.substr(i, s.length()));
     }
+}
+
+string convertToString(char* a)
+{
+    string s(a);
+ 
+    return s;
 }

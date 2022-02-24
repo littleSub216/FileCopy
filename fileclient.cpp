@@ -43,7 +43,7 @@ int main(int argc, char *argv[])
     char incomingFileDic[512]; // received message data
 
     stirng requestCopy;                // request the server to copy file
-    unsigned char shaComputedHash[20]; // hash goes here
+    char shaComputedHash[20]; // hash goes here
     char *bufferMessage;               // store the filename and checksum
     size_t bufferLen;
     //
@@ -369,12 +369,12 @@ void checksum(char filename[], char shaComputedHash[])
     int i;
     ifstream *t;
     stringstream *buffer;
-    unsigned char obuf[20];
+    char obuf[20];
 
     t = new ifstream(filename);
     buffer = new stringstream;
     *buffer << t->rdbuf();
-    SHA1((const unsigned char *)buffer->str().c_str(),
+    SHA1(buffer->str().c_str(),
          (buffer->str()).length(), obuf);
     for (i = 0; i < 20; i++)
     {
@@ -437,4 +437,25 @@ void checkAndPrintMessage(ssize_t readlen, char *msg, ssize_t bufferlen)
 
     c150debug->printf(C150APPLICATION, "PRINTING RESPONSE: Response received is \"%s\"\n", s.c_str());
     printf("Response received is \"%s\"\n", s.c_str());
+}
+
+string convertToString(char* a)
+{
+    string s(a);
+ 
+    // we cannot use this technique again
+    // to store something in s
+    // because we use constructors
+    // which are only called
+    // when the string is declared.
+ 
+    // Remove commented portion
+    // to see for yourself
+ 
+    /*
+    char demo[] = "gfg";
+    s(demo); // compilation error
+    */
+ 
+    return s;
 }
