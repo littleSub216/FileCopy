@@ -51,7 +51,7 @@ int main(int argc, char *argv[])
 			// printf ("%02x", (unsigned int) obuf[i]);
 			out += obuf[i].str();
 		}
-		printf(out)
+		printf(out.c_str())
 		printf ("\n");
 		delete t;
 		delete buffer;
