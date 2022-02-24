@@ -50,7 +50,7 @@ int main(int argc, char *argv[])
 		for (i = 0; i < 20; i++)
 		{
 			// printf ("%02x", (unsigned int) obuf[i]);
-			os<<ui;
+			os<<obuf[i];
 			out += os.str();
 		}
 		printf(out.c_str());
