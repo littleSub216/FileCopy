@@ -26,12 +26,13 @@ using namespace C150NETWORK; // for all the comp150 utilities
 const int serverArg = 1; // server name is 1st arg
 const int sourceDir = 4; // Source directory is the 4th arg
 
-void copyFile(string sourceDir, string fileName, string targetDir, int nastiness); // fwd decl
 bool isFile(string fname);
 void checkDirectory(char *dirname);
 void checksum(char filename[], unsigned char shaComputedHash[]);
 string convertToString(unsigned char *a);
 void setUpDebugLogging(const char *logname, int argc, char *argv[]);
+void copyFile(string sourceDir, string fileName, string targetDir, int nastiness); // fwd decl
+
 
 int main(int argc, char *argv[])
 {
