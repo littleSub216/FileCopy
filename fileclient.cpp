@@ -129,7 +129,7 @@ int main(int argc, char *argv[])
         // Read the targetname from the server
         c150debug->printf(C150APPLICATION, "%s: Returned from write, doing read()",
                           argv[0]);
-        sock->read(incomingMessage, sizeof(incomingMessage));
+        readlen = sock->read(incomingMessage, sizeof(incomingMessage));
         // if (readlen == 0)
         // {
         //     c150debug->printf(C150APPLICATION, "Read zero length message, trying again");
