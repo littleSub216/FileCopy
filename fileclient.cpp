@@ -211,6 +211,29 @@ void checkDirectory(char *dirname)
     }
 }
 
+
+// ------------------------------------------------------
+//
+//                   makeFileName
+//
+// Put together a directory and a file name, making
+// sure there's a / in between
+//
+// ------------------------------------------------------
+
+string
+makeFileName(string dir, string name)
+{
+  stringstream ss;
+
+  ss << dir;
+  // make sure dir name ends in /
+  if (dir.substr(dir.length() - 1, 1) != "/")
+    ss << '/';
+  ss << name;      // append file name to dir
+  return ss.str(); // return dir/name
+}
+
 // ------------------------------------------------------
 //
 //                   copyFile
