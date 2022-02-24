@@ -156,7 +156,7 @@ int main(int argc, char *argv[])
                 {
                     // compare string
                     // skip the file not been generated the checksum
-                    if ((strcmp(sourceFile->d_name, filename.toCharArray()) != 0))
+                    if ((strcmp(sourceFile->d_name, filename.c_str()) != 0))
                         continue;
 
                     // skip the . and .. names
@@ -165,7 +165,7 @@ int main(int argc, char *argv[])
                         continue; // never copy . or ..
 
                     // generate the sha code for inputfile
-                    checksum((char *)sourceFile->d_name, shaComputedHash.toCharArray());
+                    checksum((char *)sourceFile->d_name, shaComputedHash);
                     //
                     // begin end-to-end check
                     //
@@ -174,7 +174,7 @@ int main(int argc, char *argv[])
                     // checksum to string
 
                     generatechecksum = convertToString(shaComputedHash);
-                    if (generatechecksum.compare(originalchecksum) == 0)
+                    if (generatechecksum.compare(originalchecksum.c_str()) == 0)
                     {
 
                         response = "Success";
