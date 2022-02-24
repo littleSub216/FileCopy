@@ -201,7 +201,7 @@ int main(int argc, char *argv[])
                 requestCheck = filename + "#" + originalchecksum;
                 sock->write(requestCheck.c_str(), strlen(requestCheck.c_str()) + 1);
                 readlen = sock->read(incomingMessage, sizeof(incomingMessage));
-                printf("Original Checksum is: ", originalchecksum);
+                printf("Original Checksum is:\n ", originalchecksum);
                 if (readlen == 0)
                 {
                     c150debug->printf(C150APPLICATION, "Read zero length message, trying again");
