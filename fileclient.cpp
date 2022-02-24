@@ -47,8 +47,8 @@ int main(int argc, char *argv[])
     string requestCopy;                // request the server to copy file
     unsigned char shaComputedHash[20]; // hash goes here
     char *bufferMessage;               // store the filename and checksum
-    size_t bufferLen;
     string originalchecksum;
+    string requestCheck;
     //
     //  Set up debug message logging
     //
@@ -97,7 +97,7 @@ int main(int argc, char *argv[])
         // Send the message to the server
         c150debug->printf(C150APPLICATION, "%s: Writing message: \"%s\"",
                           argv[0], requestCopy);
-        sock->write(requestCopy, strlen(requestCopy.c_str()) + 1); // +1 includes the null
+        sock->write(requestCopy.c_str(), strlen(requestCopy.c_str()) + 1); // +1 includes the null
 
         // Read the response from the server
         c150debug->printf(C150APPLICATION, "%s: Returned from write, doing read()",
@@ -154,21 +154,18 @@ int main(int argc, char *argv[])
             // generate the sha code for inputfile
             checksum((char *)sourceFile->d_name, shaComputedHash);
             // merge the filename and checksum
-            bufferLen = sourceFile->d_namlen + 21; // the lenth of checksum and slash
-            bufferMessage = (char *)malloc(bufferLen);
-            sourceFile.fread(bufferMessage, 1, sourceFile->d_namlen);
-            bufferMessage = bufferMessage + "#";
+            // bufferLen = sourceFile->d_namlen + 21; // the lenth of checksum and slash
+            // bufferMessage = (char *)malloc(bufferLen);
+            // sourceFile.fread(bufferMessage, 1, sourceFile->d_namlen);
+            // bufferMessage = bufferMessage + "#";
             // checksum to sstring
             originalchecksum = convertToString(shaComputedHash);
-
-            originalchecksum.fread(bufferMessage, 1, 20);
+            requestCheck = sourceFile->d_namlen + "#" + originalchecksum;
+            // originalchecksum.fread(bufferMessage, 1, 20);
             // send the filename and checksum
-            sock->write(bufferMessage, strlen(bufferMessage) + 1);
+            sock->write(requestCheck, strlen(requestCheck) + 1);
             // // send the checksum
             // sock->write(ushaComputedHashns, strlen(shaComputedHash) + 1);
-
-            // free the message file
-            free(bufferMessage);
         }
         closedir(SRC);
     }
@@ -211,7 +208,6 @@ void checkDirectory(char *dirname)
     }
 }
 
-
 // ------------------------------------------------------
 //
 //                   makeFileName
@@ -224,14 +220,14 @@ void checkDirectory(char *dirname)
 string
 makeFileName(string dir, string name)
 {
-  stringstream ss;
+    stringstream ss;
 
-  ss << dir;
-  // make sure dir name ends in /
-  if (dir.substr(dir.length() - 1, 1) != "/")
-    ss << '/';
-  ss << name;      // append file name to dir
-  return ss.str(); // return dir/name
+    ss << dir;
+    // make sure dir name ends in /
+    if (dir.substr(dir.length() - 1, 1) != "/")
+        ss << '/';
+    ss << name;      // append file name to dir
+    return ss.str(); // return dir/name
 }
 
 // ------------------------------------------------------
