@@ -8,6 +8,7 @@
 //
 //
 // ------------------------#include "c150nastydgmsocket.h"
+#include "c150nastydgmsocket.h"
 #include "c150dgmsocket.h"
 #include "c150debug.h"
 #include <fstream>
