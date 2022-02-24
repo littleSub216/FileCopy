@@ -21,6 +21,7 @@
 #include <sstream>
 #include <stdio.h>
 #include <openssl/sha.h>
+#include <iostream>
 
 using namespace std;
 
