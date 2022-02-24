@@ -160,7 +160,9 @@ int main(int argc, char *argv[])
             // bufferMessage = bufferMessage + "#";
             // checksum to sstring
             originalchecksum = convertToString(shaComputedHash);
-            requestCheck = sourceFile->d_name + "#" + originalchecksum;
+            string filename(sourceFile->d_name);
+            string delim = "#";
+            requestCheck = filename + delim + originalchecksum;
             // originalchecksum.fread(bufferMessage, 1, 20);
             // send the filename and checksum
             sock->write(requestCheck.c_str(), strlen(requestCheck.c_str()) + 1);
