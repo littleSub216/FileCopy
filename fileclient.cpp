@@ -105,7 +105,7 @@ int main(int argc, char *argv[])
         // Read the response from the server
         c150debug->printf(C150APPLICATION, "%s: Returned from write, doing read()",
                           argv[0]);
-        readlen = sock->read(incomingFileDic, sizeof(incomingFileDic));
+        // readlen = sock->read(incomingFileDic, sizeof(incomingFileDic));
 
         //
         // Make sure source and target dirs exist
