@@ -42,7 +42,7 @@ int main(int argc, char *argv[])
 
     unsigned char shaComputedHash[20]; // hash goes here
     // bool end2endCheck;                 // if the file is identical with the original one
-    const char delim = '#'; //  the delimeter to spilt the incoming message
+    const string delim = '#'; //  the delimeter to spilt the incoming message
     DIR *TARGET;
     // Unix descriptor for target
     vector<string> splitinput;
@@ -171,7 +171,7 @@ int main(int argc, char *argv[])
                     // checksum to string
 
                     generatechecksum = convertToString(shaComputedHash);
-                    if (generatechecksum.compare(splitinput[1]) == 0)
+                    if (generatechecksum.compare(splitinput[1])) == 0)
                     {
 
                         response = "Success";
