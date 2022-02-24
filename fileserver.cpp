@@ -28,8 +28,8 @@ void checksum(char filename[], unsigned char shaComputedHash[]);
 bool isFile(string fname);
 void checkDirectory(char *dirname);
 void setUpDebugLogging(const char *logname, int argc, char *argv[]);
-string convertToString(unsigned char* a);
-
+string convertToString(unsigned char *a);
+vector<string> split(string s, string delimiter);
 
 int main(int argc, char *argv[])
 {
@@ -38,12 +38,13 @@ int main(int argc, char *argv[])
     int filenastiness;         // packet drop
     int networknastiness;      // corruption on files
     struct dirent *sourceFile; // Directory entry for source file
-    
+
     unsigned char shaComputedHash[20]; // hash goes here
     // bool end2endCheck;                 // if the file is identical with the original one
-    const char delim = '#';      //  the delimeter to spilt the incoming message
-    DIR *TARGET;      
-               // Unix descriptor for target
+    const char delim = '#'; //  the delimeter to spilt the incoming message
+    DIR *TARGET;
+    // Unix descriptor for target
+    vector<string> splitinput;
     string response;
     string generatechecksum;
 
@@ -121,7 +122,7 @@ int main(int argc, char *argv[])
                               readlen, incoming.c_str());
 
             //
-            //  create the message to return       
+            //  create the message to return
             //
             if (strspn(incomingMessage, "0123456789") == strlen(incomingMessage))
             {
@@ -144,13 +145,14 @@ int main(int argc, char *argv[])
                     fprintf(stderr, "Error opening target directory %s \n", argv[TargetDir]);
                     exit(8);
                 }
-                // split the incomingmessage by delim
-                split(incomingMessage, delim, incomingfile);
+                //// split the incomingmessage by delim
+                splitinput = split(incomingMessage, delim);
+
                 while ((sourceFile = readdir(TARGET)) != NULL)
                 {
                     // compare string
                     // skip the file not been generated the checksum
-                    if ((strcmp(sourceFile->d_name, (char*)incomingfile[0]) != 0))
+                    if ((strcmp(sourceFile->d_name, splitinput[0]) != 0))
                         continue;
 
                     // skip the . and .. names
@@ -166,9 +168,9 @@ int main(int argc, char *argv[])
                     // to do :
                     // - check one by one
                     // checksum to string
-                    
+
                     generatechecksum = convertToString(shaComputedHash);
-                    if (generatechecksum.compare(incomingfile[1])) == 0)
+                    if (generatechecksum.compare(splitinput[1]) == 0)
                     {
 
                         response = "Success";
@@ -304,13 +306,13 @@ void checksum(char filename[], unsigned char shaComputedHash[])
     delete buffer;
 }
 
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 //
 //                     setUpDebugLogging
 //
 //        For COMP 150-IDS, a set of standards utilities
 //        are provided for logging timestamped debug messages.
-//        You can use them to write your own messages, but 
+//        You can use them to write your own messages, but
 //        more importantly, the communication libraries provided
 //        to you will write into the same logs.
 //
@@ -325,26 +327,27 @@ void checksum(char filename[], unsigned char shaComputedHash[])
 //        NEEDSWORK: should be factored and shared w/pingclient
 //        NEEDSWORK: document arguments
 //
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
- 
-void setUpDebugLogging(const char *logname, int argc, char *argv[]) {
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-    //   
+void setUpDebugLogging(const char *logname, int argc, char *argv[])
+{
+
+    //
     //           Choose where debug output should go
     //
     // The default is that debug output goes to cerr.
     //
     // Uncomment the following three lines to direct
-    // debug output to a file. Comment them to 
+    // debug output to a file. Comment them to
     // default to the console
-    //  
+    //
     // Note: the new DebugStream and ofstream MUST live after we return
     // from setUpDebugLogging, so we have to allocate
     // them dynamically.
     //
     //
-    // Explanation: 
-    // 
+    // Explanation:
+    //
     //     The first line is ordinary C++ to open a file
     //     as an output stream.
     //
@@ -360,27 +363,26 @@ void setUpDebugLogging(const char *logname, int argc, char *argv[]) {
     DebugStream *filestreamp = new DebugStream(outstreamp);
     DebugStream::setDefaultLogger(filestreamp);
 
-
     //
     //  Put the program name and a timestamp on each line of the debug log.
     //
     c150debug->setPrefix(argv[0]);
-    c150debug->enableTimestamp(); 
+    c150debug->enableTimestamp();
 
     //
     // Ask to receive all classes of debug message
     //
     // See c150debug.h for other classes you can enable. To get more than
     // one class, you can or (|) the flags together and pass the combined
-    // mask to c150debug -> enableLogging 
+    // mask to c150debug -> enableLogging
     //
     // By the way, the default is to disable all output except for
     // messages written with the C150ALWAYSLOG flag. Those are typically
     // used only for things like fatal errors. So, the default is
     // for the system to run quietly without producing debug output.
     //
-    c150debug->enableLogging(C150APPLICATION | C150NETWORKTRAFFIC | 
-                             C150NETWORKDELIVERY); 
+    c150debug->enableLogging(C150APPLICATION | C150NETWORKTRAFFIC |
+                             C150NETWORKDELIVERY);
 }
 
 // ------------------------------------------------------
@@ -390,10 +392,25 @@ void setUpDebugLogging(const char *logname, int argc, char *argv[]) {
 // modified the strings
 //
 // ------------------------------------------------------
-
-string convertToString(unsigned char* a)
+vector<string> split(string s, string delimiter)
 {
-    string s(reinterpret_cast<char*>(a));
- 
+    size_t pos_start = 0, pos_end, delim_len = delimiter.length();
+    string token;
+    vector<string> res;
+
+    while ((pos_end = s.find(delimiter, pos_start)) != string::npos)
+    {
+        token = s.substr(pos_start, pos_end - pos_start);
+        pos_start = pos_end + delim_len;
+        res.push_back(token);
+    }
+    res.push_back(s.substr(pos_start));
+    return res;
+}
+
+string convertToString(unsigned char *a)
+{
+    string s(reinterpret_cast<char *>(a));
+
     return s;
 }

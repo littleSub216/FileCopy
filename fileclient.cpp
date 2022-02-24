@@ -30,10 +30,9 @@ void copyFile(string sourceDir, string fileName, string targetDir, int nastiness
 bool isFile(string fname);
 void checkDirectory(char *dirname);
 void checksum(char filename[], unsigned char shaComputedHash[]);
-string convertToString(unsigned char* a)
+string convertToString(unsigned char* a);
 
-
-int main(int argc, char *argv[])
+    int main(int argc, char *argv[])
 {
     int networknastiness;
     int filenastiness;
@@ -44,9 +43,9 @@ int main(int argc, char *argv[])
     ssize_t readlen;           // amount of data read from socket
     char incomingFileDic[512]; // received message data
 
-    stirng requestCopy;                // request the server to copy file
+    stirng requestCopy;       // request the server to copy file
     char shaComputedHash[20]; // hash goes here
-    char *bufferMessage;               // store the filename and checksum
+    char *bufferMessage;      // store the filename and checksum
     size_t bufferLen;
     string originalchecksum;
     //
@@ -445,27 +444,6 @@ void checkAndPrintMessage(ssize_t readlen, char *msg, ssize_t bufferlen)
     printf("Response received is \"%s\"\n", s.c_str());
 }
 
-string convertToString(char* a)
-{
-    string s(a);
- 
-    // we cannot use this technique again
-    // to store something in s
-    // because we use constructors
-    // which are only called
-    // when the string is declared.
- 
-    // Remove commented portion
-    // to see for yourself
- 
-    /*
-    char demo[] = "gfg";
-    s(demo); // compilation error
-    */
- 
-    return s;
-}
-
 // ------------------------------------------------------
 //
 //                   string tools
@@ -474,9 +452,9 @@ string convertToString(char* a)
 //
 // ------------------------------------------------------
 
-string convertToString(unsigned char* a)
+string convertToString(unsigned char *a)
 {
-    string s(reinterpret_cast<char*>(a));
- 
+    string s(reinterpret_cast<char *>(a));
+
     return s;
 }
