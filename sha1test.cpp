@@ -46,11 +46,11 @@ int main(int argc, char *argv[])
 		*buffer << t->rdbuf();
 		SHA1((const unsigned char *)buffer->str().c_str(), 
 		     (buffer->str()).length(), obuf);
-		for (i = 0; i < 20; i++)
-		{
-			// printf ("%02x", (unsigned int) obuf[i]);
-			out += convertToString(obuf[i]);
-		}
+		// for (i = 0; i < 20; i++)
+		// {
+		// 	// printf ("%02x", (unsigned int) obuf[i]);
+		out += convertToString(obuf);
+		// }
 		printf(out.c_str());
 		printf ("\n");
 		delete t;
