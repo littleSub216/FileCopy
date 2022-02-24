@@ -23,7 +23,7 @@
 #include <openssl/sha.h>
 
 using namespace std;
-string convertToString(unsigned char *a);
+
 int main(int argc, char *argv[])
 {
   int i, j;
@@ -46,12 +46,12 @@ int main(int argc, char *argv[])
 		*buffer << t->rdbuf();
 		SHA1((const unsigned char *)buffer->str().c_str(), 
 		     (buffer->str()).length(), obuf);
-		// for (i = 0; i < 20; i++)
-		// {
-		// 	// printf ("%02x", (unsigned int) obuf[i]);
-		out += convertToString(obuf);
-		// }
-		printf(out.c_str());
+		for (i = 0; i < 20; i++)
+		{
+			// printf ("%02x", (unsigned int) obuf[i]);
+			out += obuf[i].str();
+		}
+		printf(out)
 		printf ("\n");
 		delete t;
 		delete buffer;
@@ -59,9 +59,4 @@ int main(int argc, char *argv[])
   return 0;
 }
 
-string convertToString(unsigned char *a)
-{
-    string s(reinterpret_cast<char *>(a));
 
-    return s;
-}
