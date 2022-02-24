@@ -71,10 +71,10 @@ fileserver: fileserver.cpp  $(C150AR) $(INCLUDES)
 	$(CPP) -o fileserver  $(CPPFLAGS) fileserver.cpp -lssl -lcrypto $(C150AR)
 
 #
-# Build the file client
+# Build the fileclient
 #
 fileclient: fileclient.cpp  $(C150AR) $(INCLUDES)
-	$(CPP) -o fileclient  $(CPPFLAGS) fileclient.cpp -lssl -lcrypto$(C150AR)
+	$(CPP) -o fileclient  $(CPPFLAGS) fileclient.cpp -lssl -lcrypto $(C150AR)
 #
 # To get any .o, compile the corresponding .cpp
 #
