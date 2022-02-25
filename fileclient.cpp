@@ -35,7 +35,7 @@ void setUpDebugLogging(const char *logname, int argc, char *argv[]);
 void copyFile(string sourceDir, string fileName, string targetDir, int nastiness); // fwd decl
 bool isFile(string fname);
 void checkDirectory(char *dirname);
-string checksum(string dirname, string filename);  // generate checksum 
+string checksum(string dirname, string filename); // generate checksum
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 //
 //                    Command line arguments
@@ -67,7 +67,7 @@ int main(int argc, char *argv[])
     int filenastiness;         // corruption during the read and write
 
     // unsigned char shaComputedHash[20]; // hash goes here
-    string originalchecksum; 
+    string originalchecksum;
     string requestCheck; // send the  checksum
     int retry = 0;
 
@@ -183,55 +183,57 @@ int main(int argc, char *argv[])
             //
             while ((sourceFile = readdir(SRC)) != NULL)
             {
-                retry = 0;
-                // skip the . and .. names
-                if ((strcmp(sourceFile->d_name, ".") == 0) ||
-                    (strcmp(sourceFile->d_name, "..") == 0))
-                    continue; // never copy . or ..
+                while (retry < 5)
+                {
 
-                // do the copy -- this will check for and
-                // skip subdirectories
-                copyFile(argv[4], sourceFile->d_name, incoming.c_str(), filenastiness);
-                // generate the sha code for inputfile
-                originalchecksum = checksum(argv[4], (char *)sourceFile->d_name);
-                printf("Original checksum is: %s\n", originalchecksum.c_str());
-                string filename(sourceFile->d_name);
-                requestCheck = filename + "#" + originalchecksum;
-                sock->write(requestCheck.c_str(), strlen(requestCheck.c_str()) + 1);
-                // printf("Original checksum is: %s\n", requestCheck.c_str());
+                    // skip the . and .. names
+                    if ((strcmp(sourceFile->d_name, ".") == 0) ||
+                        (strcmp(sourceFile->d_name, "..") == 0))
+                        continue; // never copy . or ..
 
-                // READ THE RESPONSE
-                readlen = sock->read(incomingMessage, sizeof(incomingMessage));
-                if (readlen == 0)
-                {
-                    c150debug->printf(C150APPLICATION, "Read zero length message, trying again");
-                    retry++;
-                    continue;
-                }
-                //
-                // Clean up the message in case it contained junk
-                //
-                incomingMessage[readlen] = '\0';  // make sure null terminated
-                string incoming(incomingMessage); // Convert to C++ string ...it's slightly
-                                                  // easier to work with, and cleanString
-                                                  // expects it
-                cleanString(incoming);            // c150ids-supplied utility: changes
-                                                  // non-printing characters to .
-                if (incoming.compare("Success") == 0)
-                {
-                    printf("CHECK SUCCESS\n");
-                    continue;
-                }
-                else if (retry < 5)
-                {
-                    printf("CHECK FAIL\n");
-                    retry++;
-                    continue;
-                }
-                else
-                {
-                    printf("Fail 5 times\n");
-                    exit(0);
+                    // do the copy -- this will check for and
+                    // skip subdirectories
+                    copyFile(argv[4], sourceFile->d_name, incoming.c_str(), filenastiness);
+                    // generate the sha code for inputfile
+                    originalchecksum = checksum(argv[4], (char *)sourceFile->d_name);
+                    printf("Original checksum is: %s\n", originalchecksum.c_str());
+                    string filename(sourceFile->d_name);
+                    requestCheck = filename + "#" + originalchecksum;
+                    sock->write(requestCheck.c_str(), strlen(requestCheck.c_str()) + 1);
+
+                    // READ THE RESPONSE
+                    readlen = sock->read(incomingMessage, sizeof(incomingMessage));
+                    if (readlen == 0)
+                    {
+                        c150debug->printf(C150APPLICATION, "Read zero length message, trying again");
+                        retry++;
+                        continue;
+                    }
+                    //
+                    // Clean up the message in case it contained junk
+                    //
+                    incomingMessage[readlen] = '\0';  // make sure null terminated
+                    string incoming(incomingMessage); // Convert to C++ string ...it's slightly
+                                                      // easier to work with, and cleanString
+                                                      // expects it
+                    cleanString(incoming);            // c150ids-supplied utility: changes
+                                                      // non-printing characters to .
+                    if (incoming.compare("Success") == 0)
+                    {
+                        printf("SUCCESS\n");
+                        break;
+                    }
+                    else if (retry < 5)
+                    {
+                        printf("FAIL, RETRY\n");
+                        retry++;
+                        continue;
+                    }
+                    else
+                    {
+                        printf("Fail 5 times\n");
+                        exit(0);
+                    }
                 }
             }
             closedir(SRC);
@@ -626,7 +628,7 @@ string checksum(string dirname, string filename)
     stringstream *buffer;
     unsigned char obuf[20];
     char stringbuffer[50];
-    string absolute = dirname +"/" + filename;
+    string absolute = dirname + "/" + filename;
     string checksum;
 
     // printf("SHA1 (\"%s\") = ",absolute.c_str());
@@ -636,7 +638,7 @@ string checksum(string dirname, string filename)
     *buffer << t->rdbuf();
     SHA1((const unsigned char *)buffer->str().c_str(),
          (buffer->str()).length(), obuf);
-    
+
     for (i = 0; i < 20; i++)
     {
         sprintf(stringbuffer, "%02x", (unsigned int)obuf[i]);
@@ -644,7 +646,7 @@ string checksum(string dirname, string filename)
         checksum += tmp;
     }
     // printf("checksum.c_str());
-    
+
     delete t;
     delete buffer;
     return checksum;
