@@ -35,7 +35,7 @@ void setUpDebugLogging(const char *logname, int argc, char *argv[]);
 void copyFile(string sourceDir, string fileName, string targetDir, int nastiness); // fwd decl
 bool isFile(string fname);
 void checkDirectory(char *dirname);
-void checksum(string dirname, string filename, string checksum);  // generate checksum 
+string checksum(string dirname, string filename);  // generate checksum 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 //
 //                    Command line arguments
@@ -193,7 +193,7 @@ int main(int argc, char *argv[])
                 // skip subdirectories
                 copyFile(argv[4], sourceFile->d_name, incoming.c_str(), filenastiness);
                 // generate the sha code for inputfile
-                checksum(argv[4], (char *)sourceFile->d_name, originalchecksum);
+                originalchecksum = checksum(argv[4], (char *)sourceFile->d_name);
                 printf("Original checksum is: %s\n", originalchecksum.c_str());
                 string filename(sourceFile->d_name);
                 requestCheck = filename + "#" + originalchecksum;
@@ -614,7 +614,7 @@ void copyFile(string sourceDir, string fileName, string targetDir, int nastiness
 // Generate the SHA based on the input files
 //
 // ------------------------------------------------------
-void checksum(string dirname, string filename, string checksum)
+string checksum(string dirname, string filename)
 {
     int i;
     ifstream *t;
@@ -622,6 +622,8 @@ void checksum(string dirname, string filename, string checksum)
     unsigned char obuf[20];
     char stringbuffer[50];
     string absolute = dirname +"/" + filename;
+    string checksum;
+
     printf("SHA1 (\"%s\") = ",absolute.c_str());
 
     t = new ifstream(absolute);
@@ -636,7 +638,9 @@ void checksum(string dirname, string filename, string checksum)
         string tmp(stringbuffer);
         checksum += tmp;
     }
-    printf(checksum.c_str());
+    // printf("checksum.c_str());
+    
     delete t;
     delete buffer;
+    return checksum;
 }
