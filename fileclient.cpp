@@ -220,7 +220,7 @@ int main(int argc, char *argv[])
                 {
                     printf("SUCCESS\n");
                     // send response to server, go to next file
-                    break;
+                    continue;
                 }
                 else if (retry < 5)
                 {
