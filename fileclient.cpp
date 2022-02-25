@@ -32,7 +32,7 @@ using namespace C150NETWORK; // for all the comp150 utilities
 void checkAndPrintMessage(ssize_t readlen, char *buf, ssize_t bufferlen);
 void setUpDebugLogging(const char *logname, int argc, char *argv[]);
 // file copy declarations
-void copyFile(string sourceDir, string fileName, string targetDir, int nastiness); // fwd decl
+void copyFile(string sourceDir, string fileName, string targetDir, int nastiness, int count); // fwd decl
 bool isFile(string fname);
 void checkDirectory(char *dirname);
 string checksum(string dirname, string filename); // generate checksum
@@ -57,6 +57,7 @@ const int msgArg = 4;    // src directory is 4th arg
 
 int main(int argc, char *argv[])
 {
+    GRADEME(argc, argv);
 
     //
     // Variable declarations
@@ -221,6 +222,8 @@ int main(int argc, char *argv[])
                     if (incoming.compare("Success") == 0)
                     {
                         printf("SUCCESS\n");
+                        *GRADING << "File: " << filename << "end-to-end check succeeded, attempt " << retry << endl;
+
                         // send response to server, go to next file
                         // requestCheck = filename + "is checked.";
                         // requestCheck = "1";
@@ -235,6 +238,8 @@ int main(int argc, char *argv[])
                         // sock->write(requestCheck.c_str(), strlen(requestCheck.c_str()) + 1);
                         retry++;
                         // send response to server, go to next file
+                        *GRADING << "File: " << filename << "end-to-end check failed, attempt " << retry << endl;
+                    
                         continue;
                     }
                     else
@@ -242,7 +247,8 @@ int main(int argc, char *argv[])
                         requestCheck = filename + "Fail 5 times, terminated.\n";
                         // sock->write(requestCheck.c_str(), strlen(requestCheck.c_str()) + 1);
                         printf("Fail 5 times\n");
-                        exit(0);
+                        *GRADING << "File: " << filename << "end-to-end check failed, attempt " << retry << endl;
+                                            exit(0);
                     }
                 }
             }
@@ -482,7 +488,7 @@ bool isFile(string fname)
 //
 // ------------------------------------------------------
 
-void copyFile(string sourceDir, string fileName, string targetDir, int nastiness)
+void copyFile(string sourceDir, string fileName, string targetDir, int nastiness, int count)
 {
 
     //
@@ -511,6 +517,8 @@ void copyFile(string sourceDir, string fileName, string targetDir, int nastiness
     }
 
     cout << "Copying " << sourceName << " to " << targetName << endl;
+    *GRADING << "File: " << sourceName << ", beginning transmission, attempt " << count << endl;
+   
 
     // - - - - - - - - - - - - - - - - - - - - -
     // LOOK HERE! This demonstrates the
@@ -602,6 +610,8 @@ void copyFile(string sourceDir, string fileName, string targetDir, int nastiness
         if (outputFile.fclose() == 0)
         {
             cout << "Finished writing file " << targetName << endl;
+            *GRADING << "File: " << targetName << "transmission complete, waiting for end-to-end check, attempt " << count << endl;
+        
         }
         else
         {

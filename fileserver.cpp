@@ -39,6 +39,7 @@ vector<string> split(string s, string delimiter); // split the incoming message
 
 int main(int argc, char *argv[])
 {
+    GRADEME(argc, argv);
 
     //
     // Variable declarations
