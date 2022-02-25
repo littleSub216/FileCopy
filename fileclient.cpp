@@ -622,7 +622,7 @@ void checksum(string dirname, string filename, string checksum)
     unsigned char obuf[20];
     char stringbuffer[50];
     string absolute = dirname +"/" + filename;
-    printf(absolute.c_str());
+    printf("SHA1 (\"%s\") = ",absolute.c_str());
 
     t = new ifstream(absolute);
     buffer = new stringstream;
@@ -636,6 +636,7 @@ void checksum(string dirname, string filename, string checksum)
         string tmp(stringbuffer);
         checksum += tmp;
     }
+    printf(checksum.c_str());
     delete t;
     delete buffer;
 }
