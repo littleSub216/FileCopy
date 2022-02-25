@@ -624,7 +624,7 @@ string checksum(string dirname, string filename)
     string absolute = dirname +"/" + filename;
     string checksum;
 
-    printf("SHA1 (\"%s\") = ",absolute.c_str());
+    // printf("SHA1 (\"%s\") = ",absolute.c_str());
 
     t = new ifstream(absolute);
     buffer = new stringstream;

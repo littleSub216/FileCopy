@@ -28,7 +28,7 @@ using namespace std;         // for C++ std library
 using namespace C150NETWORK; // for all the comp150 utilities
 
 void setUpDebugLogging(const char *logname, int argc, char *argv[]);
-void checksum(string dirname, string filename, string checksum); // generate checksum                   // convert sha to string
+string checksum(string dirname, string filename);  // generate checksum                   // convert sha to string
 vector<string> split(string s, string delimiter); // split the incoming message
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -299,7 +299,7 @@ void setUpDebugLogging(const char *logname, int argc, char *argv[])
 // Generate the SHA based on the input files
 //
 // ------------------------------------------------------
-void checksum(string dirname, string filename, string checksum)
+string checksum(string dirname, string filename)
 {
     int i;
     ifstream *t;
@@ -307,6 +307,9 @@ void checksum(string dirname, string filename, string checksum)
     unsigned char obuf[20];
     char stringbuffer[50];
     string absolute = dirname +"/" + filename;
+    string checksum;
+
+    // printf("SHA1 (\"%s\") = ",absolute.c_str());
 
     t = new ifstream(absolute);
     buffer = new stringstream;
@@ -320,8 +323,11 @@ void checksum(string dirname, string filename, string checksum)
         string tmp(stringbuffer);
         checksum += tmp;
     }
+    // printf("checksum.c_str());
+    
     delete t;
     delete buffer;
+    return checksum;
 }
 // ------------------------------------------------------
 //
