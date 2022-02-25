@@ -1,0 +1,9 @@
+####  File copy protocol
+
+1. Open the source directory, select one file each time and slice it into packets (512 bytes)
+2. Build the sockets, transmit them in binary with the sequence tag (fseek their offset).
+3. Send an individual packet for filename and checksum.
+4. Open the target directory and reorder the received packets, store them as.TMP.
+5. Generate the checksum for the copied files and execute the end-to-end check.
+6. If the packet is lost or the file is not complete(false), respond to the client, asking to send the packets again (up to 5 times); else if end-to-end check success, drop the `.TMP`, then go to next file.
+7. Go through every file in the directory if success closes the client. Leave  `c150nastydgmsocket` open until the whole directory is copied 
