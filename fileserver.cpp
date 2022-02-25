@@ -299,7 +299,7 @@ void setUpDebugLogging(const char *logname, int argc, char *argv[])
 // Generate the SHA based on the input files
 //
 // ------------------------------------------------------
-checksum(string dirname, string filename, string checksum)
+void checksum(string dirname, string filename, string checksum)
 {
     int i;
     ifstream *t;

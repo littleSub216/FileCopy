@@ -614,7 +614,7 @@ void copyFile(string sourceDir, string fileName, string targetDir, int nastiness
 // Generate the SHA based on the input files
 //
 // ------------------------------------------------------
-checksum(string dirname, string filename, string checksum)
+void checksum(string dirname, string filename, string checksum)
 {
     int i;
     ifstream *t;
