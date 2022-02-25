@@ -194,10 +194,11 @@ int main(int argc, char *argv[])
                 copyFile(argv[4], sourceFile->d_name, incoming.c_str(), filenastiness);
                 // generate the sha code for inputfile
                 checksum((char *)sourceFile->d_name, originalchecksum);
+                printf("Original checksum is: %s\n", originalchecksum.c_str());
                 string filename(sourceFile->d_name);
                 requestCheck = filename + "#" + originalchecksum;
                 sock->write(requestCheck.c_str(), strlen(requestCheck.c_str()) + 1);
-                printf("Original checksum is: %s\n", requestCheck.c_str());
+                // printf("Original checksum is: %s\n", requestCheck.c_str());
                 
                 if (readlen == 0)
                 {

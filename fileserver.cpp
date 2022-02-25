@@ -178,6 +178,8 @@ int main(int argc, char *argv[])
 
                     // generate the sha code for inputfile
                     checksum((char *)sourceFile->d_name, generatechecksum);
+                    printf("Generate checksum is: %s\n", originalchecksum.c_str());
+                
                     if (generatechecksum.compare(originalchecksum) == 0)
                     {
 
