@@ -622,6 +622,7 @@ void checksum(string dirname, string filename, string checksum)
     unsigned char obuf[20];
     char stringbuffer[50];
     string absolute = dirname +"/" + filename;
+    printf(absolute);
 
     t = new ifstream(absolute);
     buffer = new stringstream;
