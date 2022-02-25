@@ -187,7 +187,7 @@ int main(int argc, char *argv[])
                 if ((strcmp(sourceFile->d_name, ".") == 0) ||
                     (strcmp(sourceFile->d_name, "..") == 0))
                     continue; // never copy . or ..
-                int retry = 0;
+                retry = 0;
                 while (retry < 5)
                 {
 
