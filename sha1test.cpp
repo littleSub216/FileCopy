@@ -29,7 +29,7 @@ int main(int argc, char *argv[])
 	ifstream *t;
 	stringstream *buffer;
 	string out;
-	char *stringbuffer;
+	char stringbuffer[50];
 
 	unsigned char obuf[20];
 
@@ -51,9 +51,11 @@ int main(int argc, char *argv[])
 		{
 			// printf ("%02x", (unsigned int) obuf[i]);
 			sprintf(stringbuffer, "%02x", (unsigned int)obuf[i]);
+			string tmp(stringbuffer);
+			out +=tmp;
 
 		}
-		printf(stringbuffer);
+		printf(out.c_str());
 		printf("\n");
 		delete t;
 		delete buffer;
