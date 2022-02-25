@@ -219,17 +219,17 @@ int main(int argc, char *argv[])
                                                   // non-printing characters to .
                 if (incoming.compare("Success") == 0)
                 {
-                    printf("CHECK SUCCESS");
+                    printf("CHECK SUCCESS\n");
                     break;
                 }
                 else if (retry < 5)
                 {
-                    printf("CHECK FAIL");
+                    printf("CHECK FAIL\n");
                     retry++;
                 }
                 else
                 {
-                    printf("Fail 5 times");
+                    printf("Fail 5 times\n");
                     exit(0);
                 }
             }
