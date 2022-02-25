@@ -35,7 +35,7 @@ void setUpDebugLogging(const char *logname, int argc, char *argv[]);
 void copyFile(string sourceDir, string fileName, string targetDir, int nastiness); // fwd decl
 bool isFile(string fname);
 void checkDirectory(char *dirname);
-void checksum(char filename[], string checksum);  // generate checksum 
+void checksum(string dirname, string filename, string checksum);  // generate checksum 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 //
 //                    Command line arguments
@@ -193,7 +193,7 @@ int main(int argc, char *argv[])
                 // skip subdirectories
                 copyFile(argv[4], sourceFile->d_name, incoming.c_str(), filenastiness);
                 // generate the sha code for inputfile
-                checksum((char *)sourceFile->d_name, originalchecksum);
+                checksum(argv[4], (char *)sourceFile->d_name, originalchecksum);
                 printf("Original checksum is: %s\n", originalchecksum.c_str());
                 string filename(sourceFile->d_name);
                 requestCheck = filename + "#" + originalchecksum;
@@ -614,19 +614,21 @@ void copyFile(string sourceDir, string fileName, string targetDir, int nastiness
 // Generate the SHA based on the input files
 //
 // ------------------------------------------------------
-void checksum(char filename[], string checksum)
+checksum(string dirname, string filename, string checksum)
 {
     int i;
     ifstream *t;
     stringstream *buffer;
     unsigned char obuf[20];
     char stringbuffer[50];
+    string absolute = dirname +"/" + filename;
 
-    t = new ifstream(filename);
+    t = new ifstream(absolute);
     buffer = new stringstream;
     *buffer << t->rdbuf();
     SHA1((const unsigned char *)buffer->str().c_str(),
          (buffer->str()).length(), obuf);
+    
     for (i = 0; i < 20; i++)
     {
         sprintf(stringbuffer, "%02x", (unsigned int)obuf[i]);

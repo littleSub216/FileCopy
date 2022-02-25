@@ -28,7 +28,7 @@ using namespace std;         // for C++ std library
 using namespace C150NETWORK; // for all the comp150 utilities
 
 void setUpDebugLogging(const char *logname, int argc, char *argv[]);
-void checksum(char filename[], string checksum);  // generate checksum                   // convert sha to string
+void checksum(string dirname, string filename, string checksum); // generate checksum                   // convert sha to string
 vector<string> split(string s, string delimiter); // split the incoming message
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -177,7 +177,7 @@ int main(int argc, char *argv[])
                     }
 
                     // generate the sha code for inputfile
-                    checksum((char *)sourceFile->d_name, generatechecksum);
+                    checksum(argv[3],(char *)sourceFile->d_name, generatechecksum);
                     printf("Generate checksum is: %s\n", originalchecksum.c_str());
                 
                     if (generatechecksum.compare(originalchecksum) == 0)
@@ -299,19 +299,21 @@ void setUpDebugLogging(const char *logname, int argc, char *argv[])
 // Generate the SHA based on the input files
 //
 // ------------------------------------------------------
-void checksum(char filename[], string checksum)
+checksum(string dirname, string filename, string checksum)
 {
     int i;
     ifstream *t;
     stringstream *buffer;
     unsigned char obuf[20];
     char stringbuffer[50];
+    string absolute = dirname +"/" + filename;
 
-    t = new ifstream(filename);
+    t = new ifstream(absolute);
     buffer = new stringstream;
     *buffer << t->rdbuf();
     SHA1((const unsigned char *)buffer->str().c_str(),
          (buffer->str()).length(), obuf);
+    
     for (i = 0; i < 20; i++)
     {
         sprintf(stringbuffer, "%02x", (unsigned int)obuf[i]);
