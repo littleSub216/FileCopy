@@ -28,9 +28,8 @@ using namespace std;         // for C++ std library
 using namespace C150NETWORK; // for all the comp150 utilities
 
 void setUpDebugLogging(const char *logname, int argc, char *argv[]);
-string checksum(string dirname, string filename); // generate checksum                   // convert sha to string
+string checksum(string dirname, string filename);  // generate checksum                   // convert sha to string
 vector<string> split(string s, string delimiter); // split the incoming message
-string filename;
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 //
 //                           main program
@@ -40,7 +39,6 @@ string filename;
 int main(int argc, char *argv[])
 {
     GRADEME(argc, argv);
-
     //
     // Variable declarations
     //
@@ -51,7 +49,7 @@ int main(int argc, char *argv[])
     string response;
 
     // unsigned char shaComputedHash[20]; // hash goes here
-    string generatechecksum; //sting hash goes here
+    string generatechecksum;//sting hash goes here
 
     vector<string> splitinput;
     string delim = "#"; //  the delimeter to spilt the incoming message
@@ -116,7 +114,8 @@ int main(int argc, char *argv[])
                           networknastiness);
         C150DgmSocket *sock = new C150NastyDgmSocket(networknastiness);
         c150debug->printf(C150APPLICATION, "Ready to accept messages");
-
+        
+        
         //
         // infinite loop processing messages
         //
@@ -128,8 +127,7 @@ int main(int argc, char *argv[])
             // -1 in size below is to leave room for null
             //
             readlen = sock->read(incomingMessage, sizeof(incomingMessage) - 1);
-            *GRADING << "File: " << filename.c_str() << " starting to receive file" << endl;
-
+            
             if (readlen == 0)
             {
                 c150debug->printf(C150APPLICATION, "Read zero length message, trying again");
@@ -145,9 +143,12 @@ int main(int argc, char *argv[])
                                               // expects it
             cleanString(incoming);            // c150ids-supplied utility: changes
                                               // non-printing characters to .
+            splitinput = split(incoming, delim);
+            string filename = splitinput[0];
+            *GRADING << "File: " << filename.c_str() <<" starting to receive file" << endl;
             c150debug->printf(C150APPLICATION, "Successfully read %d bytes. Message=\"%s\"",
                               readlen, incoming.c_str());
-
+            
             //
             //  create the message to return
             //
@@ -155,6 +156,7 @@ int main(int argc, char *argv[])
             {
 
                 response = argv[3]; // return the target directory
+                
             }
             else
             {
@@ -166,35 +168,33 @@ int main(int argc, char *argv[])
                 }
 
                 // end to end check
-                splitinput = split(incoming, delim);
-                string filename = splitinput[0];
+                
                 string originalchecksum = splitinput[1];
-
+                *GRADING << "File: " << filename.c_str() <<" received, beginning end-to-end check" << endl;
                 while ((sourceFile = readdir(TARGET)) != NULL)
                 {
                     // compare string
                     // skip the file not been generated the checksum
                     if ((strcmp(sourceFile->d_name, filename.c_str()) != 0))
                     {
-                        *GRADING << "File: " << filename.c_str() << " received, beginning end-to-end check" << endl;
                         continue;
                     }
 
                     // generate the sha code for inputfile
-                    generatechecksum = checksum(argv[3], (char *)sourceFile->d_name);
+                    generatechecksum = checksum(argv[3],(char *)sourceFile->d_name);
                     printf("Checked file is: %s\n", filename.c_str());
                     printf("Generate checksum is: %s\n", originalchecksum.c_str());
-
+                
                     if (generatechecksum.compare(originalchecksum) == 0)
                     {
-
                         response = "Success";
-                        *GRADING << "File: " << filename.c_str() << " end-to-end check succeeded " << endl;
+                        *GRADING << "File: " << filename.c_str() <<" end-to-end check succeeded " << endl;
+                        break;
                     }
                     else
                     {
                         response = "Fail";
-                        *GRADING << "File: " << filename.c_str() << "end-to-end check failed " << endl;
+                        *GRADING << "File: " << filename.c_str() <<"end-to-end check failed " << endl;
                     }
                 }
             }
@@ -313,7 +313,7 @@ string checksum(string dirname, string filename)
     stringstream *buffer;
     unsigned char obuf[20];
     char stringbuffer[50];
-    string absolute = dirname + "/" + filename;
+    string absolute = dirname +"/" + filename;
     string checksum;
 
     // printf("SHA1 (\"%s\") = ",absolute.c_str());
@@ -323,7 +323,7 @@ string checksum(string dirname, string filename)
     *buffer << t->rdbuf();
     SHA1((const unsigned char *)buffer->str().c_str(),
          (buffer->str()).length(), obuf);
-
+    
     for (i = 0; i < 20; i++)
     {
         sprintf(stringbuffer, "%02x", (unsigned int)obuf[i]);
@@ -331,7 +331,7 @@ string checksum(string dirname, string filename)
         checksum += tmp;
     }
     // printf("checksum.c_str());
-
+    
     delete t;
     delete buffer;
     return checksum;
