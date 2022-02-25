@@ -30,7 +30,7 @@ using namespace C150NETWORK; // for all the comp150 utilities
 void setUpDebugLogging(const char *logname, int argc, char *argv[]);
 string checksum(string dirname, string filename); // generate checksum                   // convert sha to string
 vector<string> split(string s, string delimiter); // split the incoming message
-
+string filename;
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 //
 //                           main program
@@ -128,6 +128,8 @@ int main(int argc, char *argv[])
             // -1 in size below is to leave room for null
             //
             readlen = sock->read(incomingMessage, sizeof(incomingMessage) - 1);
+            *GRADING << "File: " << filename.c_str() << " starting to receive file" << endl;
+
             if (readlen == 0)
             {
                 c150debug->printf(C150APPLICATION, "Read zero length message, trying again");
@@ -174,6 +176,7 @@ int main(int argc, char *argv[])
                     // skip the file not been generated the checksum
                     if ((strcmp(sourceFile->d_name, filename.c_str()) != 0))
                     {
+                        *GRADING << "File: " << filename.c_str() << " received, beginning end-to-end check" << endl;
                         continue;
                     }
 
@@ -186,10 +189,12 @@ int main(int argc, char *argv[])
                     {
 
                         response = "Success";
+                        *GRADING << "File: " << filename.c_str() << " end-to-end check succeeded " << endl;
                     }
                     else
                     {
                         response = "Fail";
+                        *GRADING << "File: " << filename.c_str() << "end-to-end check failed " << endl;
                     }
                 }
             }
