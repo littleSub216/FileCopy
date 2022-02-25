@@ -194,8 +194,7 @@ int main(int argc, char *argv[])
 
                     // do the copy -- this will check for and
                     // skip subdirectories
-                    copyFile(argv[4], sourceFile->d_name, incoming.c_str(), filenastiness);
-                    // generate the sha code for inputfile
+                    copyFile(argv[4], sourceFile->d_name, incoming.c_str(), filenastiness, retry);// generate the sha code for inputfile
                     originalchecksum = checksum(argv[4], (char *)sourceFile->d_name);
                     printf("Original checksum is: %s\n", originalchecksum.c_str());
                     string filename(sourceFile->d_name);
