@@ -183,56 +183,65 @@ int main(int argc, char *argv[])
             //
             while ((sourceFile = readdir(SRC)) != NULL)
             {
-
                 // skip the . and .. names
                 if ((strcmp(sourceFile->d_name, ".") == 0) ||
                     (strcmp(sourceFile->d_name, "..") == 0))
                     continue; // never copy . or ..
+                int retry = 0;
+                while (retry < 5)
+                {
 
-                // do the copy -- this will check for and
-                // skip subdirectories
-                copyFile(argv[4], sourceFile->d_name, incoming.c_str(), filenastiness);
-                // generate the sha code for inputfile
-                originalchecksum = checksum(argv[4], (char *)sourceFile->d_name);
-                printf("Original checksum is: %s\n", originalchecksum.c_str());
-                string filename(sourceFile->d_name);
-                requestCheck = filename + "#" + originalchecksum;
-                sock->write(requestCheck.c_str(), strlen(requestCheck.c_str()) + 1);
+                    // do the copy -- this will check for and
+                    // skip subdirectories
+                    copyFile(argv[4], sourceFile->d_name, incoming.c_str(), filenastiness);
+                    // generate the sha code for inputfile
+                    originalchecksum = checksum(argv[4], (char *)sourceFile->d_name);
+                    printf("Original checksum is: %s\n", originalchecksum.c_str());
+                    string filename(sourceFile->d_name);
+                    requestCheck = filename + "#" + originalchecksum;
+                    sock->write(requestCheck.c_str(), strlen(requestCheck.c_str()) + 1);
 
-                // READ THE RESPONSE
-                readlen = sock->read(incomingMessage, sizeof(incomingMessage));
-                if (readlen == 0)
-                {
-                    c150debug->printf(C150APPLICATION, "Read zero length message, trying again");
-                    retry++;
-                    continue;
-                }
-                //
-                // Clean up the message in case it contained junk
-                //
-                incomingMessage[readlen] = '\0';  // make sure null terminated
-                string incoming(incomingMessage); // Convert to C++ string ...it's slightly
-                                                  // easier to work with, and cleanString
-                                                  // expects it
-                cleanString(incoming);            // c150ids-supplied utility: changes
-                                                  // non-printing characters to .
-                if (incoming.compare("Success") == 0)
-                {
-                    printf("SUCCESS\n");
-                    // send response to server, go to next file
-                    continue;
-                }
-                else if (retry < 5)
-                {
-                    printf("FAIL, RETRY\n");
-                    retry++;
-                    // send response to server, go to next file
-                    continue;
-                }
-                else
-                {
-                    printf("Fail 5 times\n");
-                    exit(0);
+                    // READ THE RESPONSE
+                    readlen = sock->read(incomingMessage, sizeof(incomingMessage));
+                    if (readlen == 0)
+                    {
+                        c150debug->printf(C150APPLICATION, "Read zero length message, trying again");
+                        retry++;
+                        continue;
+                    }
+                    //
+                    // Clean up the message in case it contained junk
+                    //
+                    incomingMessage[readlen] = '\0';  // make sure null terminated
+                    string incoming(incomingMessage); // Convert to C++ string ...it's slightly
+                                                      // easier to work with, and cleanString
+                                                      // expects it
+                    cleanString(incoming);            // c150ids-supplied utility: changes
+                                                      // non-printing characters to .
+                    if (incoming.compare("Success") == 0)
+                    {
+                        printf("SUCCESS\n");
+                        // send response to server, go to next file
+                        requestCheck = filename + "is checked.";
+                        sock->write(requestCheck.c_str(), strlen(requestCheck.c_str()) + 1);
+                        break;
+                    }
+                    else if (retry < 5)
+                    {
+                        printf("FAIL, RETRY\n");
+                        requestCheck = filename + "fails, plz try again.\n";
+                        sock->write(requestCheck.c_str(), strlen(requestCheck.c_str()) + 1);
+                        retry++;
+                        // send response to server, go to next file
+                        continue;
+                    }
+                    else
+                    {
+                        requestCheck = filename + "Fail 5 times, terminated.\n";
+                        sock->write(requestCheck.c_str(), strlen(requestCheck.c_str()) + 1);
+                        printf("Fail 5 times\n");
+                        exit(0);
+                    }
                 }
             }
             closedir(SRC);
