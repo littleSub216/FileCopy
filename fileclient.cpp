@@ -220,12 +220,13 @@ int main(int argc, char *argv[])
                 if (incoming.compare("Success") == 0)
                 {
                     printf("CHECK SUCCESS\n");
-                    break;
+                    continue;
                 }
                 else if (retry < 5)
                 {
                     printf("CHECK FAIL\n");
                     retry++;
+                    continue;
                 }
                 else
                 {
