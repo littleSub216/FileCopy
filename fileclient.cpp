@@ -183,9 +183,7 @@ int main(int argc, char *argv[])
             //
             while ((sourceFile = readdir(SRC)) != NULL)
             {
-                retry = 0;
-                while (retry < 5)
-                {
+                
 
                     // skip the . and .. names
                     if ((strcmp(sourceFile->d_name, ".") == 0) ||
@@ -222,14 +220,14 @@ int main(int argc, char *argv[])
                     if (incoming.compare("Success") == 0)
                     {
                         printf("SUCCESS\n");
-                        // send confim to server, go to next file
+                        // send response to server, go to next file
                         break;
                     }
                     else if (retry < 5)
                     {
                         printf("FAIL, RETRY\n");
                         retry++;
-                        // send response to server, resend this checksum
+                        // send response to server, go to next file
                         continue;
                     }
                     else
@@ -237,7 +235,7 @@ int main(int argc, char *argv[])
                         printf("Fail 5 times\n");
                         exit(0);
                     }
-                }
+                
             }
             closedir(SRC);
         }
