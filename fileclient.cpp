@@ -221,12 +221,14 @@ int main(int argc, char *argv[])
                     if (incoming.compare("Success") == 0)
                     {
                         printf("SUCCESS\n");
+                        // send confim to server, go to next file
                         break;
                     }
                     else if (retry < 5)
                     {
                         printf("FAIL, RETRY\n");
                         retry++;
+                        // send response to server, resend this checksum
                         continue;
                     }
                     else
