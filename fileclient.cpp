@@ -183,6 +183,7 @@ int main(int argc, char *argv[])
             //
             while ((sourceFile = readdir(SRC)) != NULL)
             {
+                retry = 0;
                 while (retry < 5)
                 {
 
