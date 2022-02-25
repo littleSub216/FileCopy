@@ -35,9 +35,7 @@ void setUpDebugLogging(const char *logname, int argc, char *argv[]);
 void copyFile(string sourceDir, string fileName, string targetDir, int nastiness); // fwd decl
 bool isFile(string fname);
 void checkDirectory(char *dirname);
-void checksum(char filename[], unsigned char shaComputedHash[]); // generate checksum
-string convertToString(unsigned char *a);
-
+void checksum(char filename[], string checksum);  // generate checksum 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 //
 //                    Command line arguments
@@ -68,8 +66,8 @@ int main(int argc, char *argv[])
     int networknastiness;      // how aggressively do we drop packets
     int filenastiness;         // corruption during the read and write
 
-    unsigned char shaComputedHash[20]; // hash goes here
-    string originalchecksum;
+    // unsigned char shaComputedHash[20]; // hash goes here
+    string originalchecksum; 
     string requestCheck; // send the  checksum
     int retry = 0;
 
@@ -195,8 +193,7 @@ int main(int argc, char *argv[])
                 // skip subdirectories
                 copyFile(argv[4], sourceFile->d_name, incoming.c_str(), filenastiness);
                 // generate the sha code for inputfile
-                checksum((char *)sourceFile->d_name, shaComputedHash);
-                originalchecksum = convertToString(shaComputedHash);
+                checksum((char *)sourceFile->d_name, originalchecksum);
                 string filename(sourceFile->d_name);
                 requestCheck = filename + "#" + originalchecksum;
                 sock->write(requestCheck.c_str(), strlen(requestCheck.c_str()) + 1);
@@ -616,12 +613,13 @@ void copyFile(string sourceDir, string fileName, string targetDir, int nastiness
 // Generate the SHA based on the input files
 //
 // ------------------------------------------------------
-void checksum(char filename[], unsigned char shaComputedHash[])
+void checksum(char filename[], string checksum)
 {
     int i;
     ifstream *t;
     stringstream *buffer;
     unsigned char obuf[20];
+    char stringbuffer[50];
 
     t = new ifstream(filename);
     buffer = new stringstream;
@@ -630,15 +628,10 @@ void checksum(char filename[], unsigned char shaComputedHash[])
          (buffer->str()).length(), obuf);
     for (i = 0; i < 20; i++)
     {
-        shaComputedHash[i] = (unsigned int)obuf[i];
+        sprintf(stringbuffer, "%02x", (unsigned int)obuf[i]);
+        string tmp(stringbuffer);
+        checksum += tmp;
     }
     delete t;
     delete buffer;
-}
-
-string convertToString(unsigned char *a)
-{
-    string s(reinterpret_cast<char *>(a));
-
-    return s;
 }

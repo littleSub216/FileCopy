@@ -24,14 +24,12 @@
 #include <openssl/sha.h>
 #include <vector>
 
-
 using namespace std;         // for C++ std library
 using namespace C150NETWORK; // for all the comp150 utilities
 
 void setUpDebugLogging(const char *logname, int argc, char *argv[]);
-void checksum(char filename[], unsigned char shaComputedHash[]); // generate checksum
-string convertToString(unsigned char *a);                        // convert sha to string
-vector<string> split(string s, string delimiter);                // split the incoming message
+void checksum(char filename[], string checksum);  // generate checksum                   // convert sha to string
+vector<string> split(string s, string delimiter); // split the incoming message
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 //
@@ -51,8 +49,8 @@ int main(int argc, char *argv[])
     int filenastiness;         //corruption during the read and write
     string response;
 
-    unsigned char shaComputedHash[20]; // hash goes here
-    string generatechecksum;
+    // unsigned char shaComputedHash[20]; // hash goes here
+    string generatechecksum;//sting hash goes here
 
     vector<string> splitinput;
     string delim = "#"; //  the delimeter to spilt the incoming message
@@ -150,9 +148,9 @@ int main(int argc, char *argv[])
             //
             //  create the message to return
             //
-            if (incoming.compare("SRC") == 0 )
+            if (incoming.compare("SRC") == 0)
             {
-                
+
                 response = argv[3]; // return the target directory
             }
             else
@@ -169,7 +167,7 @@ int main(int argc, char *argv[])
                 string filename = splitinput[0];
                 string originalchecksum = splitinput[1];
 
-                while((sourceFile = readdir(TARGET)) != NULL)
+                while ((sourceFile = readdir(TARGET)) != NULL)
                 {
                     // compare string
                     // skip the file not been generated the checksum
@@ -179,8 +177,7 @@ int main(int argc, char *argv[])
                     }
 
                     // generate the sha code for inputfile
-                    checksum((char *)sourceFile->d_name, shaComputedHash);
-                    generatechecksum = convertToString(shaComputedHash);
+                    checksum((char *)sourceFile->d_name, generatechecksum);
                     if (generatechecksum.compare(originalchecksum) == 0)
                     {
 
@@ -300,12 +297,13 @@ void setUpDebugLogging(const char *logname, int argc, char *argv[])
 // Generate the SHA based on the input files
 //
 // ------------------------------------------------------
-void checksum(char filename[], unsigned char shaComputedHash[])
+void checksum(char filename[], string checksum)
 {
     int i;
     ifstream *t;
     stringstream *buffer;
     unsigned char obuf[20];
+    char stringbuffer[50];
 
     t = new ifstream(filename);
     buffer = new stringstream;
@@ -314,7 +312,9 @@ void checksum(char filename[], unsigned char shaComputedHash[])
          (buffer->str()).length(), obuf);
     for (i = 0; i < 20; i++)
     {
-        shaComputedHash[i] = (unsigned int)obuf[i];
+        sprintf(stringbuffer, "%02x", (unsigned int)obuf[i]);
+        string tmp(stringbuffer);
+        checksum += tmp;
     }
     delete t;
     delete buffer;
@@ -340,11 +340,4 @@ vector<string> split(string s, string delimiter)
     }
     res.push_back(s.substr(pos_start));
     return res;
-}
-
-string convertToString(unsigned char *a)
-{
-    string s(reinterpret_cast<char *>(a));
-
-    return s;
 }
