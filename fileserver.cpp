@@ -28,7 +28,7 @@ using namespace std;         // for C++ std library
 using namespace C150NETWORK; // for all the comp150 utilities
 
 void setUpDebugLogging(const char *logname, int argc, char *argv[]);
-string checksum(string dirname, string filename);  // generate checksum                   // convert sha to string
+string checksum(string dirname, string filename); // generate checksum                   // convert sha to string
 vector<string> split(string s, string delimiter); // split the incoming message
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -50,7 +50,7 @@ int main(int argc, char *argv[])
     string response;
 
     // unsigned char shaComputedHash[20]; // hash goes here
-    string generatechecksum;//sting hash goes here
+    string generatechecksum; //sting hash goes here
 
     vector<string> splitinput;
     string delim = "#"; //  the delimeter to spilt the incoming message
@@ -177,10 +177,10 @@ int main(int argc, char *argv[])
                     }
 
                     // generate the sha code for inputfile
-                    generatechecksum = checksum(argv[3],(char *)sourceFile->d_name);
+                    generatechecksum = checksum(argv[3], (char *)sourceFile->d_name);
                     printf("Checked file is: %s\n", filename.c_str());
                     printf("Generate checksum is: %s\n", originalchecksum.c_str());
-                
+
                     if (generatechecksum.compare(originalchecksum) == 0)
                     {
 
@@ -307,7 +307,7 @@ string checksum(string dirname, string filename)
     stringstream *buffer;
     unsigned char obuf[20];
     char stringbuffer[50];
-    string absolute = dirname +"/" + filename;
+    string absolute = dirname + "/" + filename;
     string checksum;
 
     // printf("SHA1 (\"%s\") = ",absolute.c_str());
@@ -317,7 +317,7 @@ string checksum(string dirname, string filename)
     *buffer << t->rdbuf();
     SHA1((const unsigned char *)buffer->str().c_str(),
          (buffer->str()).length(), obuf);
-    
+
     for (i = 0; i < 20; i++)
     {
         sprintf(stringbuffer, "%02x", (unsigned int)obuf[i]);
@@ -325,7 +325,7 @@ string checksum(string dirname, string filename)
         checksum += tmp;
     }
     // printf("checksum.c_str());
-    
+
     delete t;
     delete buffer;
     return checksum;

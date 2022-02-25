@@ -222,15 +222,17 @@ int main(int argc, char *argv[])
                     {
                         printf("SUCCESS\n");
                         // send response to server, go to next file
-                        requestCheck = filename + "is checked.";
-                        sock->write(requestCheck.c_str(), strlen(requestCheck.c_str()) + 1);
+                        // requestCheck = filename + "is checked.";
+                        // requestCheck = "1";
+                        // sock->write(requestCheck.c_str(), strlen(requestCheck.c_str()) + 1);
                         break;
                     }
                     else if (retry < 5)
                     {
                         printf("FAIL, RETRY\n");
-                        requestCheck = filename + "fails, plz try again.\n";
-                        sock->write(requestCheck.c_str(), strlen(requestCheck.c_str()) + 1);
+                        // requestCheck = filename + "fails, plz try again.\n";
+                        // requestCheck = "0";
+                        // sock->write(requestCheck.c_str(), strlen(requestCheck.c_str()) + 1);
                         retry++;
                         // send response to server, go to next file
                         continue;
@@ -238,7 +240,7 @@ int main(int argc, char *argv[])
                     else
                     {
                         requestCheck = filename + "Fail 5 times, terminated.\n";
-                        sock->write(requestCheck.c_str(), strlen(requestCheck.c_str()) + 1);
+                        // sock->write(requestCheck.c_str(), strlen(requestCheck.c_str()) + 1);
                         printf("Fail 5 times\n");
                         exit(0);
                     }
