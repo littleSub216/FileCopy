@@ -24,11 +24,14 @@
 #include <openssl/sha.h>
 #include <vector>
 
+#define PACKETSIZE 256
+
 using namespace std;         // for C++ std library
 using namespace C150NETWORK; // for all the comp150 utilities
 
 void setUpDebugLogging(const char *logname, int argc, char *argv[]);
-string checksum(string dirname, string filename);  // generate checksum                   // convert sha to string
+void checkDirectory(char *dirname);
+string checksum(string dirname, string filename); // generate checksum                   // convert sha to string
 vector<string> split(string s, string delimiter); // split the incoming message
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 //
@@ -47,13 +50,22 @@ int main(int argc, char *argv[])
     int networknastiness;      // how aggressively do we drop packets
     int filenastiness;         //corruption during the read and write
     string response;
+    size_t len; // length of w length
 
-    // unsigned char shaComputedHash[20]; // hash goes here
-    string generatechecksum;//sting hash goes here
+    string generatechecksum; // string hash goes here
+    string originalchecksum; // the checksum of original file
+    string filename;         // the filename recieved
+    string incoming;         // recieve incoming message
+    string filesize;
 
-    vector<string> splitinput;
-    string delim = "#"; //  the delimeter to spilt the incoming message
+    vector<string> splitinput; // to split the incoming message
+    string delim = "#";        //  the delimeter to spilt the incoming message
+    string suffix = ".tmp";
     DIR *TARGET;
+    void *buffer;
+    int packetnumber; // count the total numebr of the packets
+    int packetcount;  // store the seqeunce of coming packets
+    vector<int> checkoreder;
     struct dirent *sourceFile; // Directory entry for source file
 
     //
@@ -114,8 +126,7 @@ int main(int argc, char *argv[])
                           networknastiness);
         C150DgmSocket *sock = new C150NastyDgmSocket(networknastiness);
         c150debug->printf(C150APPLICATION, "Ready to accept messages");
-        
-        
+
         //
         // infinite loop processing messages
         //
@@ -127,7 +138,7 @@ int main(int argc, char *argv[])
             // -1 in size below is to leave room for null
             //
             readlen = sock->read(incomingMessage, sizeof(incomingMessage) - 1);
-            
+
             if (readlen == 0)
             {
                 c150debug->printf(C150APPLICATION, "Read zero length message, trying again");
@@ -137,87 +148,131 @@ int main(int argc, char *argv[])
             //
             // Clean up the message in case it contained junk
             //
-            incomingMessage[readlen] = '\0';  // make sure null terminated
-            string incoming(incomingMessage); // Convert to C++ string ...it's slightly
-                                              // easier to work with, and cleanString
-                                              // expects it
-            cleanString(incoming);            // c150ids-supplied utility: changes
-                                              // non-printing characters to .
+            incomingMessage[readlen] = '\0'; // make sure null terminated
+            incoming(incomingMessage);       // Convert to C++ string ...it's slightly
+                                             // easier to work with, and cleanString
+                                             // expects it
+            cleanString(incoming);           // c150ids-supplied utility: changes
+                                             // non-printing characters to .
             splitinput = split(incoming, delim);
-            string filename = splitinput[0];
-            *GRADING << "File: " << filename.c_str() <<" starting to receive file" << endl;
+
+            *GRADING << "File: " << filename.c_str() << " starting to receive file" << endl;
+
             c150debug->printf(C150APPLICATION, "Successfully read %d bytes. Message=\"%s\"",
                               readlen, incoming.c_str());
-            
+
             //
             //  create the message to return
             //
-            if (incoming.compare("SRC") == 0)
+            if (splitinput.size() == 3) // recive the request message
             {
+                originalchecksum = splitinput[0];
+                filename = splitinput[1] + suffix; // add the temp suffix
+                filesize = atoi(splitinput[2]);
+                packetnumber = filesize / PACKETSIZE;
+                buffer = (void *)malloc(filesize);
 
-                response = argv[3]; // return the target directory
-                
-            }
-            else
-            {
+                checkDirectory(argv[3]);
+                //
+                // Open the target directory
+                //
                 TARGET = opendir(argv[3]);
                 if (TARGET == NULL)
                 {
                     fprintf(stderr, "Error opening target directory %s \n", argv[3]);
                     exit(8);
                 }
+                // closedir(TARGET); // we just wanted to be sure it was there
+                string targetName = makeFileName(argv[3], filename);
+                //
+                // Define the wrapped file descriptors
+                //
 
-                // end to end check
-                
-                string originalchecksum = splitinput[1];
-                *GRADING << "File: " << filename.c_str() <<" received, beginning end-to-end check" << endl;
-                while ((sourceFile = readdir(TARGET)) != NULL)
+                NASTYFILE outputFile(filenastiness);
+                // do an fopen on the input file
+                fopenretval = outputFile.fopen(filename.c_str(), "rb");
+                if (fopenretval == NULL)
                 {
-                    // compare string
-                    // skip the file not been generated the checksum
-                    if ((strcmp(sourceFile->d_name, filename.c_str()) != 0))
-                    {
-                        continue;
-                    }
-
-                    // generate the sha code for inputfile
-                    generatechecksum = checksum(argv[3],(char *)sourceFile->d_name);
-                    printf("Checked file is: %s\n", filename.c_str());
-                    printf("Generate checksum is: %s\n", originalchecksum.c_str());
-                
-                    if (generatechecksum.compare(originalchecksum) == 0)
-                    {
-                        response = "Success";
-                        *GRADING << "File: " << filename.c_str() <<" end-to-end check succeeded " << endl;
-                        break;
-                    }
-                    else
-                    {
-                        response = "Fail";
-                        *GRADING << "File: " << filename.c_str() <<"end-to-end check failed " << endl;
-                    }
+                    cerr << "Error opening input file " << sourceName << " errno=" << strerror(errno) << endl;
+                    exit(12);
                 }
+                response = argv[3]; // return the target directory for confirmation
             }
-            //
-            // write the return message
-            //
-            c150debug->printf(C150APPLICATION, "Responding with message=\"%s\"",
-                              response.c_str());
-            sock->write(response.c_str(), response.length() + 1);
+            else if (checkoreder.size() < packetnumber)
+            {
+                printf("the data is %s\n", memsplitinput[0]);
+
+                // data pakcet
+                // recieve the file by packet
+                char *curr_string = (char *)((unsigned long)buffer + memsplitinput[1] * PACKETSIZE); // set the offset in the buffer string
+
+                //
+                // sourceSize = strlen(incoming[0]);
+                //
+                // write the packet
+                len = outputFile.fwrite(curr_string, 1, PACKETSIZE, memsplitinput[0]);
+                if (len != PACKETSIZE)
+                {
+                    cerr << "Error writing packet " << memsplitinput[1] << "  errno=" << strerror(errno) << endl;
+                    exit(16);
+                }
+                // send the ack?
+                
+                checkoreder.push_back(atoi(memsplitinput[1]));
+            }
+            // go through th value in checkorder to ask for resend
+            else
+            {
+                //
+                // Free the input buffer to avoid memory leaks after the file is wrote
+                //
+                free(buffer);
+                // begin  end to end check
+                // *GRADING << "File: " << filename.c_str() << " received, beginning end-to-end check" << endl;
+
+                // generate the sha code for tmp the tmp file
+                generatechecksum = checksum(argv[3], (char *)filename);
+                printf("Checked file is: %s\n", filename.c_str());
+                printf("Generate checksum is: %s\n", originalchecksum.c_str());
+
+                if (generatechecksum.compare(originalchecksum) == 0)
+                {
+                    response = "Success";
+                    *GRADING << "File: " << filename.c_str() << " end-to-end check succeeded " << endl;
+                    filename = filename.erase(filename.end() - 4, filename.end()); // remove the suffix
+                    break;
+                }
+                else
+                {
+                    if (remove(filename) != 0)
+                        perror("Error deleting file");
+                    else
+                        response = "Fail";
+                    *GRADING << "File: " << filename.c_str() << "end-to-end check failed " << endl;
+                }
+                
+            }
         }
+        //
+        // write the return message
+        //
+        c150debug->printf(C150APPLICATION, "Responding with message=\"%s\"",
+                          response.c_str());
+        sock->write(response.c_str(), response.length() + 1);
     }
+}
 
-    catch (C150NetworkException &e)
-    {
-        // Write to debug log
-        c150debug->printf(C150ALWAYSLOG, "Caught C150NetworkException: %s\n",
-                          e.formattedExplanation().c_str());
-        // In case we're logging to a file, write to the console too
-        cerr << argv[0] << ": caught C150NetworkException: " << e.formattedExplanation() << endl;
-    }
+catch (C150NetworkException &e)
+{
+    // Write to debug log
+    c150debug->printf(C150ALWAYSLOG, "Caught C150NetworkException: %s\n",
+                      e.formattedExplanation().c_str());
+    // In case we're logging to a file, write to the console too
+    cerr << argv[0] << ": caught C150NetworkException: " << e.formattedExplanation() << endl;
+}
 
-    // This only executes if there was an error caught above
-    return 4;
+// This only executes if there was an error caught above
+return 4;
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -313,7 +368,7 @@ string checksum(string dirname, string filename)
     stringstream *buffer;
     unsigned char obuf[20];
     char stringbuffer[50];
-    string absolute = dirname +"/" + filename;
+    string absolute = dirname + "/" + filename;
     string checksum;
 
     // printf("SHA1 (\"%s\") = ",absolute.c_str());
@@ -323,7 +378,7 @@ string checksum(string dirname, string filename)
     *buffer << t->rdbuf();
     SHA1((const unsigned char *)buffer->str().c_str(),
          (buffer->str()).length(), obuf);
-    
+
     for (i = 0; i < 20; i++)
     {
         sprintf(stringbuffer, "%02x", (unsigned int)obuf[i]);
@@ -331,7 +386,7 @@ string checksum(string dirname, string filename)
         checksum += tmp;
     }
     // printf("checksum.c_str());
-    
+
     delete t;
     delete buffer;
     return checksum;
@@ -357,4 +412,50 @@ vector<string> split(string s, string delimiter)
     }
     res.push_back(s.substr(pos_start));
     return res;
+}
+
+// ------------------------------------------------------
+//
+//                   makeFileName
+//
+// Put together a directory and a file name, making
+// sure there's a / in between
+//
+// ------------------------------------------------------
+
+string
+makeFileName(string dir, string name)
+{
+    stringstream ss;
+
+    ss << dir;
+    // make sure dir name ends in /
+    if (dir.substr(dir.length() - 1, 1) != "/")
+        ss << '/';
+    ss << name;      // append file name to dir
+    return ss.str(); // return dir/name
+}
+
+// ------------------------------------------------------
+//
+//                   checkDirectory
+//
+//  Make sure directory exists
+//
+// ------------------------------------------------------
+
+void checkDirectory(char *dirname)
+{
+    struct stat statbuf;
+    if (lstat(dirname, &statbuf) != 0)
+    {
+        fprintf(stderr, "Error stating supplied source directory %s\n", dirname);
+        exit(8);
+    }
+
+    if (!S_ISDIR(statbuf.st_mode))
+    {
+        fprintf(stderr, "File %s exists but is not a directory\n", dirname);
+        exit(8);
+    }
 }
