@@ -4,16 +4,14 @@
 //
 //        COMMAND LINE
 //
-//              fileclient <server> <networknastiness> <filenastiness> <srcdir>
+//              fileserver <networknastiness> <filenastiness> <targetdir>
 //
-//
-// ------------------------#include "c150nastydgmsocket.h"
+// --------------------------------------------------------------
+
 #include "c150nastydgmsocket.h"
-#include "c150dgmsocket.h"
 #include "c150debug.h"
 #include <fstream>
-#include "c150nastyfile.h" // for c150nastyfile & framework
-#include "c150grading.h"
+#include <cstdlib>
 #include <dirent.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -24,34 +22,14 @@
 #include <iostream> // for cout
 #include <fstream>  // for input files
 #include <openssl/sha.h>
-
-#define PACKETSIZE 256
-#define delim "#"
+#include <vector>
 
 using namespace std;         // for C++ std library
 using namespace C150NETWORK; // for all the comp150 utilities
 
-// forward declarations
-void checkAndPrintMessage(ssize_t readlen, char *buf, ssize_t bufferlen);
 void setUpDebugLogging(const char *logname, int argc, char *argv[]);
-// file copy declarations
-void copyFile(string sourceDir, string fileName, string targetDir, int nastiness, int count); // fwd decl
-bool isFile(string fname);
-void checkDirectory(char *dirname);
-string checksum(string dirname, string filename); // generate checksum
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-//
-//                    Command line arguments
-//
-// The following are used as subscripts to argv, the command line arguments
-// If we want to change the command line syntax, doing this
-// symbolically makes it a bit easier.
-//
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-const int serverArg = 1; // server name is 1st arg
-const int msgArg = 4;    // src directory is 4th arg
-
+string checksum(string dirname, string filename);  // generate checksum                   // convert sha to string
+vector<string> split(string s, string delimiter); // split the incoming message
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 //
 //                           main program
@@ -61,329 +39,185 @@ const int msgArg = 4;    // src directory is 4th arg
 int main(int argc, char *argv[])
 {
     GRADEME(argc, argv);
-
     //
     // Variable declarations
     //
     ssize_t readlen;           // amount of data read from socket
     char incomingMessage[512]; // received message data
     int networknastiness;      // how aggressively do we drop packets
-    int filenastiness;         // corruption during the read and write
+    int filenastiness;         //corruption during the read and write
+    string response;
 
     // unsigned char shaComputedHash[20]; // hash goes here
-    string originalchecksum;
-    string filelen;
-    string requestCheck; // send the  checksum
-    int retry = 0;
+    string generatechecksum;//sting hash goes here
 
-    DIR *SRC;                  // Unix descriptor for open directory
+    vector<string> splitinput;
+    string delim = "#"; //  the delimeter to spilt the incoming message
+    DIR *TARGET;
     struct dirent *sourceFile; // Directory entry for source file
-    struct stat statbuf;       // store the whole file and return the size
-
-    vector<string> splitfile; // to split file into packets
-    void *fopenretval;
-    string errorString;
-    void *buffer;
-    struct stat statbuf;
-    size_t sourceSize;
 
     //
-    // Make sure command line looks right
+    // Check command line and parse arguments
     //
-    if (argc != 5)
+    if (argc != 4)
     {
-        fprintf(stderr, "Correct syntxt is: %s <server> <networknastiness> <filenastiness> <srcdir>\n", argv[0]);
+        fprintf(stderr, "Correct syntxt is: %s <networknastiness> <filenastiness> <targetdir>\n", argv[0]);
         exit(1);
     }
-    if (strspn(argv[2], "0123456789") != strlen(argv[2]))
+    if (strspn(argv[1], "0123456789") != strlen(argv[1]))
     {
-        fprintf(stderr, "networknastiness %s is not numeric\n", argv[2]);
+        fprintf(stderr, "networknastiness %s is not numeric\n", argv[1]);
         fprintf(stderr, "Correct syntxt is: %s <networknastiness> <filenastiness> <targetdir>\n", argv[0]);
         exit(4);
     }
-    networknastiness = atoi(argv[2]); // convert command line string to integer
+    networknastiness = atoi(argv[1]); // convert command line string to integer
 
-    if (strspn(argv[3], "0123456789") != strlen(argv[3]))
+    if (strspn(argv[2], "0123456789") != strlen(argv[1]))
     {
-        fprintf(stderr, "filenastiness %s is not numeric\n", argv[3]);
+        fprintf(stderr, "filenastiness %s is not numeric\n", argv[1]);
         fprintf(stderr, "Correct syntxt is: %s <networknastiness> <filenastiness> <targetdir>\n", argv[0]);
         exit(4);
     }
-    filenastiness = atoi(argv[3]); // convert command line string to integer
-
+    filenastiness = atoi(argv[2]); // convert command line string to integer
     //
     //  Set up debug message logging
     //
-    setUpDebugLogging("fileclientdebug.txt", argc, argv);
+    printf("network nastiness is set to: %d\n", networknastiness);
+    printf("file nastiness is set to: %d\n", filenastiness);
+    setUpDebugLogging("fileserverdebug.txt", argc, argv);
 
     //
+    // We set a debug output indent in the server only, not the client.
+    // That way, if we run both programs and merge the logs this way:
     //
-    //        Send / receive / copy
+    //    cat pingserverdebug.txt pingserverclient.txt | sort
+    //
+    // it will be easy to tell the server and client entries apart.
+    //
+    // Note that the above trick works because at the start of each
+    // log entry is a timestamp that sort will indeed arrange in
+    // timestamp order, thus merging the logs by time across
+    // server and client.
+    //
+    c150debug->setIndent("    "); // if we merge client and server
+    // logs, server stuff will be indented
+
+    //
+    // Create socket, loop receiving and responding
     //
     try
     {
-
+        //
+        // Create the socket
+        //
         c150debug->printf(C150APPLICATION, "Creating C150NastyDgmSocket(nastiness=%d)",
                           networknastiness);
         C150DgmSocket *sock = new C150NastyDgmSocket(networknastiness);
         c150debug->printf(C150APPLICATION, "Ready to accept messages");
-
-        // Tell the DGMSocket which server to talk to
-        sock->setServerName(argv[serverArg]);
-
-        // Send the message to the server
-        // c150debug->printf(C150APPLICATION, "%s: Request to copy file from directory: \"%s\"",
-        //                   argv[0], argv[msgArg]);
-        // sock->write(argv[msgArg], strlen(argv[msgArg]) + 1); // +1 includes the null
-
-        // // Read the targetname from the server
-        // c150debug->printf(C150APPLICATION, "%s: Returned from write, doing read()",
-        //                   argv[0]);
-        // readlen = sock->read(incomingMessage, sizeof(incomingMessage));
-        // // if (readlen == 0)
-        // // {
-        // //     c150debug->printf(C150APPLICATION, "Read zero length message, trying again");
-        // //     continue;
-        // // }
-        // //
-        // // Clean up the message in case it contained junk
-        // //
-        // incomingMessage[readlen] = '\0';  // make sure null terminated
-        // string incoming(incomingMessage); // Convert to C++ string ...it's slightly
-        //                                   // easier to work with, and cleanString
-        //                                   // expects it
-        // cleanString(incoming);            // c150ids-supplied utility: changes
-        //                                   // non-printing characters to .
-        // c150debug->printf(C150APPLICATION, "Successfully read %d bytes. Message=\"%s\"",
-        //                   readlen, incoming.c_str());
-
-        // Check and print the incoming message
-        // checkAndPrintMessage(readlen, incomingMessage, sizeof(incomingMessage));
-        // check the directory or the end to end result
-        // if (incoming.compare("TARGET") == 0)
-        // {
-
-        checkDirectory(argv[4]);
+        
+        
         //
-        // Open the source directory
+        // infinite loop processing messages
         //
-        SRC = opendir(argv[4]);
-        if (SRC == NULL)
+        while (1)
         {
-            fprintf(stderr, "Error opening source directory %s\n", argv[4]);
-            exit(8);
-        }
-        //
-        //  Loop copying the files
-        //
-        //  copyfile takes name of target file
-        //
-        while ((sourceFile = readdir(SRC)) != NULL)
-        {
-            // skip the . and .. names
-            if ((strcmp(sourceFile->d_name, ".") == 0) ||
-                (strcmp(sourceFile->d_name, "..") == 0))
-                continue; // never copy . or ..
-            retry = 0;
-            string sourceName = makeFileName(argv[4], sourceFile->d_name); // make the absolute path of file
-                                                                           //
-            // make sure the file we're copying is not a directory
+
             //
-            if (!isFile(sourceName))
+            // Read a packet
+            // -1 in size below is to leave room for null
+            //
+            readlen = sock->read(incomingMessage, sizeof(incomingMessage) - 1);
+            
+            if (readlen == 0)
             {
-                cerr << "Input file " << sourceName << " is a directory or other non-regular file. Skipping" << endl;
-                return;
+                c150debug->printf(C150APPLICATION, "Read zero length message, trying again");
+                continue;
             }
 
-            cout << "Copying " << sourceName << endl;
-            *GRADING << "File: " << sourceName << ", beginning transmission, attempt " << count << endl;
-
             //
-            // Read whole input file to get the total size
+            // Clean up the message in case it contained junk
             //
-            if (lstat(sourceName.c_str(), &statbuf) != 0)
+            incomingMessage[readlen] = '\0';  // make sure null terminated
+            string incoming(incomingMessage); // Convert to C++ string ...it's slightly
+                                              // easier to work with, and cleanString
+                                              // expects it
+            cleanString(incoming);            // c150ids-supplied utility: changes
+                                              // non-printing characters to .
+            splitinput = split(incoming, delim);
+            string filename = splitinput[0];
+            *GRADING << "File: " << filename.c_str() <<" starting to receive file" << endl;
+            c150debug->printf(C150APPLICATION, "Successfully read %d bytes. Message=\"%s\"",
+                              readlen, incoming.c_str());
+            
+            //
+            //  create the message to return
+            //
+            if (incoming.compare("SRC") == 0)
             {
-                fprintf(stderr, "copyFile: Error stating supplied source file %s\n", sourceName.c_str());
-                exit(20);
+
+                response = argv[3]; // return the target directory
+                
             }
-            sourceSize = statbuf.st_size;
-
-            while (retry < 5)
+            else
             {
-
-                // do the copy -- this will check for and
-                // skip subdirectories
-                // copyFile(argv[4], sourceFile->d_name, incoming.c_str(), filenastiness, retry);// generate the sha code for inputfile
-                originalchecksum = checksum(argv[4], (char *)sourceFile->d_name);
-                printf("Original checksum is: %s\n", originalchecksum.c_str());
-
-                /**
-                 * @brief divide and send the packets
-                 * 
-                 */
-                NASTYFILE inputFile(filenastiness); // See c150nastyfile.h for interface
-                                                    // do an fopen on the input file
-                fopenretval = inputFile.fopen(sourceName.c_str(), "rb");
-                if (fopenretval == NULL)
+                TARGET = opendir(argv[3]);
+                if (TARGET == NULL)
                 {
-                    cerr << "Error opening input file " << sourceName << " errno=" << strerror(errno) << endl;
-                    exit(12);
+                    fprintf(stderr, "Error opening target directory %s \n", argv[3]);
+                    exit(8);
                 }
-                //
-                // Read the whole file
-                //
-                filelen = inputFile.fread((char *)buffer, 1, sourceSize);
-                string filename(sourceFile->d_name);
 
-                requestCheck = originalchecksum + delim + filename + delim + filelen;
-                sock->write(requestCheck.c_str(), strlen(requestCheck.c_str()) + 1); // send the first head info
-
-                // SPLIT AND SEND THE PACKET
-                int packetNumber = filelen / PACKETSIZE;
-                int i = 0;
-                while (i < packetNumber)
+                // end to end check
+                
+                string originalchecksum = splitinput[1];
+                *GRADING << "File: " << filename.c_str() <<" received, beginning end-to-end check" << endl;
+                while ((sourceFile = readdir(TARGET)) != NULL)
                 {
-                    char *readbuffer = (char *)((unsigned long)buffer + i * PACKETSIZE);
-                    if (i != packetNumber - 1)
+                    // compare string
+                    // skip the file not been generated the checksum
+                    if ((strcmp(sourceFile->d_name, filename.c_str()) != 0))
                     {
-                        inputFile.fread(readbuffer, 1, PACKETSIZE);
+                        continue;
+                    }
+
+                    // generate the sha code for inputfile
+                    generatechecksum = checksum(argv[3],(char *)sourceFile->d_name);
+                    printf("Checked file is: %s\n", filename.c_str());
+                    printf("Generate checksum is: %s\n", originalchecksum.c_str());
+                
+                    if (generatechecksum.compare(originalchecksum) == 0)
+                    {
+                        response = "Success";
+                        *GRADING << "File: " << filename.c_str() <<" end-to-end check succeeded " << endl;
+                        break;
                     }
                     else
                     {
-                        // LAST PACKET
-                        inputFile.fread(readbuffer, 1, sourceSize - packetNumber * PACKETSIZE);
+                        response = "Fail";
+                        *GRADING << "File: " << filename.c_str() <<"end-to-end check failed " << endl;
                     }
-                    splitfile[i] = readbuffer; // store teh packet for resend
-                    requestCheck = readbuffer + delim + to_string(i);
-                    // SEND THE PACKET
-                    sock->write(requestCheck.c_str(), strlen(requestCheck.c_str()) + 1); // send the packet one by one
-                    // SHOULD ADD THE ACK?
-                    i++;
-                }
-                // // READ THE RESPONSE
-                readlen = sock->read(incomingMessage, sizeof(incomingMessage));
-                if (readlen == 0)
-                {
-                    c150debug->printf(C150APPLICATION, "Read zero length message, trying again");
-                    retry++;
-                    continue;
-                }
-                //
-                // Clean up the message in case it contained junk
-                //
-                incomingMessage[readlen] = '\0';  // make sure null terminated
-                string incoming(incomingMessage); // Convert to C++ string ...it's slightly
-                                                  // easier to work with, and cleanString
-                                                  // expects it
-                cleanString(incoming);            // c150ids-supplied utility: changes
-                                                  // non-printing characters to .
-                if (incoming.compare("Success") == 0)
-                {
-                    printf("SUCCESS\n");
-                    *GRADING << "File: " << filename << "end-to-end check succeeded, attempt " << retry << endl;
-
-                    // send response to server, go to next file
-                    // requestCheck = filename + "is checked.";
-                    // requestCheck = "1";
-                    // sock->write(requestCheck.c_str(), strlen(requestCheck.c_str()) + 1);
-                    break;
-                }
-                else if (retry < 5)
-                {
-                    printf("FAIL, RETRY\n");
-                    // requestCheck = filename + "fails, plz try again.\n";
-                    // requestCheck = "0";
-                    // sock->write(requestCheck.c_str(), strlen(requestCheck.c_str()) + 1);
-                    retry++;
-                    // send response to server, go to next file
-                    *GRADING << "File: " << filename << "end-to-end check failed, attempt " << retry << endl;
-
-                    continue;
-                }
-                else
-                {
-                    requestCheck = filename + "Fail 5 times, terminated.\n";
-                    // sock->write(requestCheck.c_str(), strlen(requestCheck.c_str()) + 1);
-                    printf("Fail 5 times\n");
-                    *GRADING << "File: " << filename << "end-to-end check failed, attempt " << retry << endl;
-                    exit(0);
                 }
             }
-
-            closedir(SRC);
+            //
+            // write the return message
+            //
+            c150debug->printf(C150APPLICATION, "Responding with message=\"%s\"",
+                              response.c_str());
+            sock->write(response.c_str(), response.length() + 1);
         }
     }
 
-    //
-    //  Handle networking errors -- for now, just print message and give up!
-    //
     catch (C150NetworkException &e)
     {
         // Write to debug log
         c150debug->printf(C150ALWAYSLOG, "Caught C150NetworkException: %s\n",
                           e.formattedExplanation().c_str());
         // In case we're logging to a file, write to the console too
-        cerr << argv[0] << ": caught C150NetworkException: " << e.formattedExplanation()
-             << endl;
+        cerr << argv[0] << ": caught C150NetworkException: " << e.formattedExplanation() << endl;
     }
 
-    return 0;
-}
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-//
-//                     checkAndPrintMessage
-//
-//        Make sure length is OK, clean up response buffer
-//        and print it to standard output.
-//
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-void checkAndPrintMessage(ssize_t readlen, char *msg, ssize_t bufferlen)
-{
-    //
-    // Except in case of timeouts, we're not expecting
-    // a zero length read
-    //
-    if (readlen == 0)
-    {
-        throw C150NetworkException("Unexpected zero length read in client");
-    }
-
-    // DEFENSIVE PROGRAMMING: we aren't even trying to read this much
-    // We're just being extra careful to check this
-    if (readlen > (int)(bufferlen))
-    {
-        throw C150NetworkException("Unexpected over length read in client");
-    }
-
-    //
-    // Make sure server followed the rules and
-    // sent a null-terminated string (well, we could
-    // check that it's all legal characters, but
-    // at least we look for the null)
-    //
-    if (msg[readlen - 1] != '\0')
-    {
-        throw C150NetworkException("Client received message that was not null terminated");
-    };
-
-    //
-    // Use a routine provided in c150utility.cpp to change any control
-    // or non-printing characters to "." (this is just defensive programming:
-    // if the server maliciously or inadvertently sent us junk characters, then we
-    // won't send them to our terminal -- some
-    // control characters can do nasty things!)
-    //
-    // Note: cleanString wants a C++ string, not a char*, so we make a temporary one
-    // here. Not super-fast, but this is just a demo program.
-    string s(msg);
-    cleanString(s);
-
-    // Echo the response on the console
-
-    c150debug->printf(C150APPLICATION, "PRINTING RESPONSE: Response received is \"%s\"\n", s.c_str());
-    printf("Response received is \"%s\"\n", s.c_str());
+    // This only executes if there was an error caught above
+    return 4;
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -404,7 +238,7 @@ void checkAndPrintMessage(ssize_t readlen, char *msg, ssize_t bufferlen)
 //        to create different classes of debug output within your
 //        application code
 //
-//        NEEDSWORK: should be factored into shared code w/pingserver
+//        NEEDSWORK: should be factored and shared w/pingclient
 //        NEEDSWORK: document arguments
 //
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -418,8 +252,8 @@ void setUpDebugLogging(const char *logname, int argc, char *argv[])
     // The default is that debug output goes to cerr.
     //
     // Uncomment the following three lines to direct
-    // debug output to a file. Comment them
-    // to default to the console.
+    // debug output to a file. Comment them to
+    // default to the console
     //
     // Note: the new DebugStream and ofstream MUST live after we return
     // from setUpDebugLogging, so we have to allocate
@@ -467,205 +301,6 @@ void setUpDebugLogging(const char *logname, int argc, char *argv[])
 
 // ------------------------------------------------------
 //
-//                   checkDirectory
-//
-//  Make sure directory exists
-//
-// ------------------------------------------------------
-
-void checkDirectory(char *dirname)
-{
-    struct stat statbuf;
-    if (lstat(dirname, &statbuf) != 0)
-    {
-        fprintf(stderr, "Error stating supplied source directory %s\n", dirname);
-        exit(8);
-    }
-
-    if (!S_ISDIR(statbuf.st_mode))
-    {
-        fprintf(stderr, "File %s exists but is not a directory\n", dirname);
-        exit(8);
-    }
-}
-
-// ------------------------------------------------------
-//
-//                   isFile
-//
-//  Make sure the supplied file is not a directory or
-//  other non-regular file.
-//
-// ------------------------------------------------------
-
-bool isFile(string fname)
-{
-    const char *filename = fname.c_str();
-    struct stat statbuf;
-    if (lstat(filename, &statbuf) != 0)
-    {
-        fprintf(stderr, "isFile: Error stating supplied source file %s\n", filename);
-        return false;
-    }
-
-    if (!S_ISREG(statbuf.st_mode))
-    {
-        fprintf(stderr, "isFile: %s exists but is not a regular file\n", filename);
-        return false;
-    }
-    return true;
-}
-
-// ------------------------------------------------------
-//
-//                   copyFile
-//
-// Copy a single file from sourcdir to target dir
-//
-// ------------------------------------------------------
-
-void copyFile(string sourceDir, string fileName, string targetDir, int nastiness, int count)
-{
-
-    //
-    //  Misc variables, mostly for return codes
-    //
-    void *fopenretval;
-    size_t len;
-    string errorString;
-    char *buffer;
-    struct stat statbuf;
-    size_t sourceSize;
-
-    //
-    // Put together directory and filenames SRC/file TARGET/file
-    //
-    string sourceName = makeFileName(sourceDir, fileName);
-    string targetName = makeFileName(targetDir, fileName);
-
-    //
-    // make sure the file we're copying is not a directory
-    //
-    if (!isFile(sourceName))
-    {
-        cerr << "Input file " << sourceName << " is a directory or other non-regular file. Skipping" << endl;
-        return;
-    }
-
-    cout << "Copying " << sourceName << " to " << targetName << endl;
-    *GRADING << "File: " << sourceName << ", beginning transmission, attempt " << count << endl;
-
-    // - - - - - - - - - - - - - - - - - - - - -
-    // LOOK HERE! This demonstrates the
-    // COMP 150 Nasty File interface
-    // - - - - - - - - - - - - - - - - - - - - -
-
-    try
-    {
-
-        //
-        // Read whole input file
-        //
-        if (lstat(sourceName.c_str(), &statbuf) != 0)
-        {
-            fprintf(stderr, "copyFile: Error stating supplied source file %s\n", sourceName.c_str());
-            exit(20);
-        }
-
-        //
-        // Make an input buffer large enough for
-        // the whole file
-        //
-        sourceSize = statbuf.st_size;
-        buffer = (char *)malloc(sourceSize);
-
-        //
-        // Define the wrapped file descriptors
-        //
-        // All the operations on ile are the same
-        // ones you get documented by doing "man 3 fread", etc.
-        // except that the file descriptor arguments must
-        // be left off.
-        //
-        // Note: the NASTYFILE type is meant to be similar
-        //       to the Unix FILE type
-        //
-        NASTYFILE outputFile(nastiness); // See c150nastyfile.h for interface
-
-        // do an fopen on the input file
-        fopenretval = outputFile.fopen(sourceName.c_str(), "rb");
-        // wraps Unix fopen
-        // Note rb gives "read, binary"
-        // which avoids line end munging
-
-        if (fopenretval == NULL)
-        {
-            cerr << "Error opening input file " << sourceName << " errno=" << strerror(errno) << endl;
-            exit(12);
-        }
-
-        //
-        // Read the whole file
-        //
-        len = inputFile.fread(buffer, 1, sourceSize);
-        if (len != sourceSize)
-        {
-            cerr << "Error reading file " << sourceName << "  errno=" << strerror(errno) << endl;
-            exit(16);
-        }
-
-        if (inputFile.fclose() != 0)
-        {
-            cerr << "Error closing input file " << targetName << " errno=" << strerror(errno) << endl;
-            exit(16);
-        }
-
-        //
-        // do an fopen on the output file
-        //
-        fopenretval = outputFile.fopen(targetName.c_str(), "wb");
-        // wraps Unix fopen
-        // Note wb gives "write, binary"
-        // which avoids line and munging
-
-        //
-        // Write the whole file
-        //
-        len = outputFile.fwrite(buffer, 1, sourceSize);
-        if (len != sourceSize)
-        {
-            cerr << "Error writing file " << targetName << "  errno=" << strerror(errno) << endl;
-            exit(16);
-        }
-
-        if (outputFile.fclose() == 0)
-        {
-            cout << "Finished writing file " << targetName << endl;
-            *GRADING << "File: " << targetName << "transmission complete, waiting for end-to-end check, attempt " << count << endl;
-        }
-        else
-        {
-            cerr << "Error closing output file " << targetName << " errno=" << strerror(errno) << endl;
-            exit(16);
-        }
-
-        //
-        // Free the input buffer to avoid memory leaks
-        //
-        free(buffer);
-
-        //
-        // Handle any errors thrown by the file framekwork
-        //
-    }
-    catch (C150Exception &e)
-    {
-        cerr << "nastyfiletest:copyfile(): Caught C150Exception: " << e.formattedExplanation() << endl;
-    }
-}
-
-// ------------------------------------------------------
-//
 //                   checksum
 //
 // Generate the SHA based on the input files
@@ -678,7 +313,7 @@ string checksum(string dirname, string filename)
     stringstream *buffer;
     unsigned char obuf[20];
     char stringbuffer[50];
-    string absolute = dirname + "/" + filename;
+    string absolute = dirname +"/" + filename;
     string checksum;
 
     // printf("SHA1 (\"%s\") = ",absolute.c_str());
@@ -688,7 +323,7 @@ string checksum(string dirname, string filename)
     *buffer << t->rdbuf();
     SHA1((const unsigned char *)buffer->str().c_str(),
          (buffer->str()).length(), obuf);
-
+    
     for (i = 0; i < 20; i++)
     {
         sprintf(stringbuffer, "%02x", (unsigned int)obuf[i]);
@@ -696,8 +331,30 @@ string checksum(string dirname, string filename)
         checksum += tmp;
     }
     // printf("checksum.c_str());
-
+    
     delete t;
     delete buffer;
     return checksum;
+}
+// ------------------------------------------------------
+//
+//                   string tools
+//
+// modified the strings
+//
+// ------------------------------------------------------
+vector<string> split(string s, string delimiter)
+{
+    size_t pos_start = 0, pos_end, delim_len = delimiter.length();
+    string token;
+    vector<string> res;
+
+    while ((pos_end = s.find(delimiter, pos_start)) != string::npos)
+    {
+        token = s.substr(pos_start, pos_end - pos_start);
+        pos_start = pos_end + delim_len;
+        res.push_back(token);
+    }
+    res.push_back(s.substr(pos_start));
+    return res;
 }
