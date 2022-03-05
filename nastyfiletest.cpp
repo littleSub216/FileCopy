@@ -54,6 +54,7 @@ using namespace C150NETWORK;
 void copyFile(string sourceDir, string fileName, string targetDir, int nastiness); // fwd decl
 bool isFile(string fname);
 void checkDirectory(char *dirname);
+string makeFileName(string dir, string name);
 
 // ------------------------------------------------------
 //                   Main program
@@ -364,4 +365,18 @@ void copyFile(string sourceDir, string fileName, string targetDir, int nastiness
   {
     cerr << "nastyfiletest:copyfile(): Caught C150Exception: " << e.formattedExplanation() << endl;
   }
+}
+
+
+string
+makeFileName(string dir, string name)
+{
+  stringstream ss;
+
+  ss << dir;
+  // make sure dir name ends in /
+  if (dir.substr(dir.length() - 1, 1) != "/")
+    ss << '/';
+  ss << name;      // append file name to dir
+  return ss.str(); // return dir/name
 }

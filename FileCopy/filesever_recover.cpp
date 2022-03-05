@@ -9,11 +9,9 @@
 // --------------------------------------------------------------
 
 #include "c150nastydgmsocket.h"
-#include "c150dgmsocket.h"
 #include "c150debug.h"
 #include <fstream>
-#include "c150nastyfile.h" // for c150nastyfile & framework
-#include "c150grading.h"
+#include <cstdlib>
 #include <dirent.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -25,10 +23,8 @@
 #include <fstream>  // for input files
 #include <openssl/sha.h>
 #include <vector>
-#include <cstdio>
 
-// #define PACKETSIZE 256
-// #define delim "#"
+#define PACKETSIZE 256
 
 using namespace std;         // for C++ std library
 using namespace C150NETWORK; // for all the comp150 utilities
@@ -37,7 +33,6 @@ void setUpDebugLogging(const char *logname, int argc, char *argv[]);
 void checkDirectory(char *dirname);
 string checksum(string dirname, string filename); // generate checksum                   // convert sha to string
 vector<string> split(string s, string delimiter); // split the incoming message
-string makeFileName(string dir, string name);
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 //
 //                           main program
@@ -46,11 +41,10 @@ string makeFileName(string dir, string name);
 
 int main(int argc, char *argv[])
 {
-    // GRADEME(argc, argv);
+    GRADEME(argc, argv);
     //
     // Variable declarations
     //
-    const int PACKETSIZE = 256;
     ssize_t readlen;           // amount of data read from socket
     char incomingMessage[512]; // received message data
     int networknastiness;      // how aggressively do we drop packets
@@ -61,19 +55,18 @@ int main(int argc, char *argv[])
     string generatechecksum; // string hash goes here
     string originalchecksum; // the checksum of original file
     string filename;         // the filename recieved
-    // string incoming;         // recieve incoming message
-    int filesize;
+    string incoming;         // recieve incoming message
+    string filesize;
 
     vector<string> splitinput; // to split the incoming message
-    void *fopenretval;
-    string delim = "#"; //  the delimeter to spilt the incoming message
+    string delim = "#";        //  the delimeter to spilt the incoming message
     string suffix = ".tmp";
     DIR *TARGET;
     void *buffer;
     int packetnumber; // count the total numebr of the packets
-    // int packetcount;  // store the seqeunce of coming packets
+    int packetcount;  // store the seqeunce of coming packets
     vector<int> checkoreder;
-    // struct dirent *sourceFile; // Directory entry for source file
+    struct dirent *sourceFile; // Directory entry for source file
 
     //
     // Check command line and parse arguments
@@ -155,12 +148,12 @@ int main(int argc, char *argv[])
             //
             // Clean up the message in case it contained junk
             //
-            incomingMessage[readlen] = '\0';  // make sure null terminated
-            string incoming(incomingMessage); // Convert to C++ string ...it's slightly
-                                              // easier to work with, and cleanString
-                                              // expects it
-            cleanString(incoming);            // c150ids-supplied utility: changes
-                                              // non-printing characters to .
+            incomingMessage[readlen] = '\0'; // make sure null terminated
+            incoming(incomingMessage);       // Convert to C++ string ...it's slightly
+                                             // easier to work with, and cleanString
+                                             // expects it
+            cleanString(incoming);           // c150ids-supplied utility: changes
+                                             // non-printing characters to .
             splitinput = split(incoming, delim);
 
             *GRADING << "File: " << filename.c_str() << " starting to receive file" << endl;
@@ -175,7 +168,7 @@ int main(int argc, char *argv[])
             {
                 originalchecksum = splitinput[0];
                 filename = splitinput[1] + suffix; // add the temp suffix
-                filesize = stoi(splitinput[2].c_str());
+                filesize = atoi(splitinput[2]);
                 packetnumber = filesize / PACKETSIZE;
                 buffer = (void *)malloc(filesize);
 
@@ -200,41 +193,32 @@ int main(int argc, char *argv[])
                 fopenretval = outputFile.fopen(filename.c_str(), "rb");
                 if (fopenretval == NULL)
                 {
-                    cerr << "Error opening input file " << filename << " errno=" << strerror(errno) << endl;
+                    cerr << "Error opening input file " << sourceName << " errno=" << strerror(errno) << endl;
                     exit(12);
                 }
                 response = argv[3]; // return the target directory for confirmation
             }
-            else if ((int)checkoreder.size() < packetnumber)
+            else if (checkoreder.size() < packetnumber)
             {
-                NASTYFILE outputFile(filenastiness);
-                // do an fopen on the input file
-                fopenretval = outputFile.fopen(filename.c_str(), "rb");
-                if (fopenretval == NULL)
-                {
-                    cerr << "Error opening input file " << filename << " errno=" << strerror(errno) << endl;
-                    exit(12);
-                }
-                printf("the data is %s\n", splitinput[0].c_str());
+                printf("the data is %s\n", memsplitinput[0]);
 
                 // data pakcet
-                int offset = atoi(splitinput[1].c_str());
                 // recieve the file by packet
-                // char *curr_string = (char *)((unsigned long)buffer + offset * PACKETSIZE); // set the offset in the buffer string
-                fseek((FILE*)fopenretval, offset, SEEK_CUR);
+                char *curr_string = (char *)((unsigned long)buffer + memsplitinput[1] * PACKETSIZE); // set the offset in the buffer string
+
                 //
                 // sourceSize = strlen(incoming[0]);
                 //
                 // write the packet
-                len = outputFile.fwrite(splitinput[0].c_str(),1, PACKETSIZE);
+                len = outputFile.fwrite(curr_string, 1, PACKETSIZE, memsplitinput[0]);
                 if (len != PACKETSIZE)
                 {
-                    cerr << "Error writing packet " << splitinput[1] << "  errno=" << strerror(errno) << endl;
+                    cerr << "Error writing packet " << memsplitinput[1] << "  errno=" << strerror(errno) << endl;
                     exit(16);
                 }
                 // send the ack?
-
-                checkoreder.push_back(atoi(splitinput[1].c_str()));
+                
+                checkoreder.push_back(atoi(memsplitinput[1]));
             }
             // go through th value in checkorder to ask for resend
             else
@@ -247,7 +231,7 @@ int main(int argc, char *argv[])
                 // *GRADING << "File: " << filename.c_str() << " received, beginning end-to-end check" << endl;
 
                 // generate the sha code for tmp the tmp file
-                generatechecksum = checksum(argv[3], filename.c_str());
+                generatechecksum = checksum(argv[3], (char *)filename);
                 printf("Checked file is: %s\n", filename.c_str());
                 printf("Generate checksum is: %s\n", originalchecksum.c_str());
 
@@ -255,18 +239,18 @@ int main(int argc, char *argv[])
                 {
                     response = "Success";
                     *GRADING << "File: " << filename.c_str() << " end-to-end check succeeded " << endl;
-                    filename.erase(filename.end() - 4, filename.end()); // remove the suffix
+                    filename = filename.erase(filename.end() - 4, filename.end()); // remove the suffix
                     break;
                 }
                 else
                 {
-
-                    if (remove(filename.c_str()) != 0)
+                    if (remove(filename) != 0)
                         perror("Error deleting file");
                     else
                         response = "Fail";
                     *GRADING << "File: " << filename.c_str() << "end-to-end check failed " << endl;
                 }
+                
             }
         }
         //
@@ -276,18 +260,19 @@ int main(int argc, char *argv[])
                           response.c_str());
         sock->write(response.c_str(), response.length() + 1);
     }
+}
 
-    catch (C150NetworkException &e)
-    {
-        // Write to debug log
-        c150debug->printf(C150ALWAYSLOG, "Caught C150NetworkException: %s\n",
-                          e.formattedExplanation().c_str());
-        // In case we're logging to a file, write to the console too
-        cerr << argv[0] << ": caught C150NetworkException: " << e.formattedExplanation() << endl;
-    }
+catch (C150NetworkException &e)
+{
+    // Write to debug log
+    c150debug->printf(C150ALWAYSLOG, "Caught C150NetworkException: %s\n",
+                      e.formattedExplanation().c_str());
+    // In case we're logging to a file, write to the console too
+    cerr << argv[0] << ": caught C150NetworkException: " << e.formattedExplanation() << endl;
+}
 
-    // This only executes if there was an error caught above
-    return 4;
+// This only executes if there was an error caught above
+return 4;
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

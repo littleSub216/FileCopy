@@ -24,9 +24,9 @@
 #include <iostream> // for cout
 #include <fstream>  // for input files
 #include <openssl/sha.h>
-#include <vector>
-// #define PACKETSIZE 256
-// #define delim "#"
+
+#define PACKETSIZE 256
+#define delim "#"
 
 using namespace std;         // for C++ std library
 using namespace C150NETWORK; // for all the comp150 utilities
@@ -39,7 +39,6 @@ void copyFile(string sourceDir, string fileName, string targetDir, int nastiness
 bool isFile(string fname);
 void checkDirectory(char *dirname);
 string checksum(string dirname, string filename); // generate checksum
-string makeFileName(string dir, string name);
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 //
 //                    Command line arguments
@@ -61,14 +60,11 @@ const int msgArg = 4;    // src directory is 4th arg
 
 int main(int argc, char *argv[])
 {
-    // GRADEME(argc, argv);
+    GRADEME(argc, argv);
 
     //
     // Variable declarations
     //
-    const int PACKETSIZE = 256;
-    string delim = "#"; //  the delimeter to spilt the incoming message
-    
     ssize_t readlen;           // amount of data read from socket
     char incomingMessage[512]; // received message data
     int networknastiness;      // how aggressively do we drop packets
@@ -88,6 +84,7 @@ int main(int argc, char *argv[])
     void *fopenretval;
     string errorString;
     void *buffer;
+    struct stat statbuf;
     size_t sourceSize;
 
     //
@@ -195,11 +192,11 @@ int main(int argc, char *argv[])
             if (!isFile(sourceName))
             {
                 cerr << "Input file " << sourceName << " is a directory or other non-regular file. Skipping" << endl;
-                exit(8);
+                return;
             }
 
             cout << "Copying " << sourceName << endl;
-            // *GRADING << "File: " << sourceName << ", beginning transmission, attempt " << count << endl;
+            *GRADING << "File: " << sourceName << ", beginning transmission, attempt " << count << endl;
 
             //
             // Read whole input file to get the total size
@@ -209,7 +206,7 @@ int main(int argc, char *argv[])
                 fprintf(stderr, "copyFile: Error stating supplied source file %s\n", sourceName.c_str());
                 exit(20);
             }
-            sourceSize = statbuf.st_size; // the size of the whole file
+            sourceSize = statbuf.st_size;
 
             while (retry < 5)
             {
@@ -232,7 +229,6 @@ int main(int argc, char *argv[])
                     cerr << "Error opening input file " << sourceName << " errno=" << strerror(errno) << endl;
                     exit(12);
                 }
-                buffer = (void *)malloc(sourceSize);
                 //
                 // Read the whole file
                 //
@@ -243,7 +239,7 @@ int main(int argc, char *argv[])
                 sock->write(requestCheck.c_str(), strlen(requestCheck.c_str()) + 1); // send the first head info
 
                 // SPLIT AND SEND THE PACKET
-                int packetNumber = atoi(filelen.c_str())/ PACKETSIZE;
+                int packetNumber = filelen / PACKETSIZE;
                 int i = 0;
                 while (i < packetNumber)
                 {
@@ -257,9 +253,8 @@ int main(int argc, char *argv[])
                         // LAST PACKET
                         inputFile.fread(readbuffer, 1, sourceSize - packetNumber * PACKETSIZE);
                     }
-                    string readpacket = string(readbuffer);
-                    splitfile[i] = readpacket; // store teh packet for resend
-                    requestCheck = readpacket + delim + to_string(i);
+                    splitfile[i] = readbuffer; // store teh packet for resend
+                    requestCheck = readbuffer + delim + to_string(i);
                     // SEND THE PACKET
                     sock->write(requestCheck.c_str(), strlen(requestCheck.c_str()) + 1); // send the packet one by one
                     // SHOULD ADD THE ACK?
@@ -521,6 +516,153 @@ bool isFile(string fname)
     return true;
 }
 
+// ------------------------------------------------------
+//
+//                   copyFile
+//
+// Copy a single file from sourcdir to target dir
+//
+// ------------------------------------------------------
+
+void copyFile(string sourceDir, string fileName, string targetDir, int nastiness, int count)
+{
+
+    //
+    //  Misc variables, mostly for return codes
+    //
+    void *fopenretval;
+    size_t len;
+    string errorString;
+    char *buffer;
+    struct stat statbuf;
+    size_t sourceSize;
+
+    //
+    // Put together directory and filenames SRC/file TARGET/file
+    //
+    string sourceName = makeFileName(sourceDir, fileName);
+    string targetName = makeFileName(targetDir, fileName);
+
+    //
+    // make sure the file we're copying is not a directory
+    //
+    if (!isFile(sourceName))
+    {
+        cerr << "Input file " << sourceName << " is a directory or other non-regular file. Skipping" << endl;
+        return;
+    }
+
+    cout << "Copying " << sourceName << " to " << targetName << endl;
+    *GRADING << "File: " << sourceName << ", beginning transmission, attempt " << count << endl;
+
+    // - - - - - - - - - - - - - - - - - - - - -
+    // LOOK HERE! This demonstrates the
+    // COMP 150 Nasty File interface
+    // - - - - - - - - - - - - - - - - - - - - -
+
+    try
+    {
+
+        //
+        // Read whole input file
+        //
+        if (lstat(sourceName.c_str(), &statbuf) != 0)
+        {
+            fprintf(stderr, "copyFile: Error stating supplied source file %s\n", sourceName.c_str());
+            exit(20);
+        }
+
+        //
+        // Make an input buffer large enough for
+        // the whole file
+        //
+        sourceSize = statbuf.st_size;
+        buffer = (char *)malloc(sourceSize);
+
+        //
+        // Define the wrapped file descriptors
+        //
+        // All the operations on outputFile are the same
+        // ones you get documented by doing "man 3 fread", etc.
+        // except that the file descriptor arguments must
+        // be left off.
+        //
+        // Note: the NASTYFILE type is meant to be similar
+        //       to the Unix FILE type
+        //
+        NASTYFILE inputFile(nastiness); // See c150nastyfile.h for interface
+
+        // do an fopen on the input file
+        fopenretval = inputFile.fopen(sourceName.c_str(), "rb");
+        // wraps Unix fopen
+        // Note rb gives "read, binary"
+        // which avoids line end munging
+
+        if (fopenretval == NULL)
+        {
+            cerr << "Error opening input file " << sourceName << " errno=" << strerror(errno) << endl;
+            exit(12);
+        }
+
+        //
+        // Read the whole file
+        //
+        len = inputFile.fread(buffer, 1, sourceSize);
+        if (len != sourceSize)
+        {
+            cerr << "Error reading file " << sourceName << "  errno=" << strerror(errno) << endl;
+            exit(16);
+        }
+
+        if (inputFile.fclose() != 0)
+        {
+            cerr << "Error closing input file " << targetName << " errno=" << strerror(errno) << endl;
+            exit(16);
+        }
+
+        //
+        // do an fopen on the output file
+        //
+        fopenretval = outputFile.fopen(targetName.c_str(), "wb");
+        // wraps Unix fopen
+        // Note wb gives "write, binary"
+        // which avoids line and munging
+
+        //
+        // Write the whole file
+        //
+        len = outputFile.fwrite(buffer, 1, sourceSize);
+        if (len != sourceSize)
+        {
+            cerr << "Error writing file " << targetName << "  errno=" << strerror(errno) << endl;
+            exit(16);
+        }
+
+        if (outputFile.fclose() == 0)
+        {
+            cout << "Finished writing file " << targetName << endl;
+            *GRADING << "File: " << targetName << "transmission complete, waiting for end-to-end check, attempt " << count << endl;
+        }
+        else
+        {
+            cerr << "Error closing output file " << targetName << " errno=" << strerror(errno) << endl;
+            exit(16);
+        }
+
+        //
+        // Free the input buffer to avoid memory leaks
+        //
+        free(buffer);
+
+        //
+        // Handle any errors thrown by the file framekwork
+        //
+    }
+    catch (C150Exception &e)
+    {
+        cerr << "nastyfiletest:copyfile(): Caught C150Exception: " << e.formattedExplanation() << endl;
+    }
+}
 
 // ------------------------------------------------------
 //
@@ -558,17 +700,4 @@ string checksum(string dirname, string filename)
     delete t;
     delete buffer;
     return checksum;
-}
-
-string
-makeFileName(string dir, string name)
-{
-  stringstream ss;
-
-  ss << dir;
-  // make sure dir name ends in /
-  if (dir.substr(dir.length() - 1, 1) != "/")
-    ss << '/';
-  ss << name;      // append file name to dir
-  return ss.str(); // return dir/name
 }
