@@ -40,7 +40,7 @@ bool isFile(string fname);
 void checkDirectory(char *dirname);
 string checksum(string dirname, string filename); // generate checksum
 string makeFileName(string dir, string name);
-void writeSocket(string filename, int packernumber, C150DgmSocket *sock, int fileNastiness);
+void writePacket(string filename, int packernumber, int lastPacketLen, C150DgmSocket *sock, int fileNastiness);
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 //
 //                    Command line arguments
@@ -62,7 +62,7 @@ const int msgArg = 4;    // src directory is 4th arg
 
 int main(int argc, char *argv[])
 {
-    // GRADEME(argc, argv);
+    GRADEME(argc, argv);
 
     //
     // Variable declarations
@@ -70,14 +70,14 @@ int main(int argc, char *argv[])
     const int PACKETSIZE = 256;
     string delim = "#"; //  the delimeter to spilt the incoming message
 
-    ssize_t readlen;           // amount of data read from socket
+    // ssize_t readlen;           // amount of data read from socket
     char incomingMessage[512]; // received message data
     int networknastiness;      // how aggressively do we drop packets
     int filenastiness;         // corruption during the read and write
 
     // unsigned char shaComputedHash[20]; // hash goes here
     string originalchecksum;
-    string filelen;
+    // string filelen;
     string requestCheck; // send the  checksum
     int retry = 0;
 
@@ -86,12 +86,11 @@ int main(int argc, char *argv[])
     struct stat statbuf;       // store the whole file and return the size
 
     vector<string> splitfile; // to split file into packets
-    void *fopenretval;
     string errorString;
-    void *buffer;
+
     size_t sourceSize;
     int packetNumber;
-
+    int lastPacketLen;
     //
     // Make sure command line looks right
     //
@@ -172,7 +171,7 @@ int main(int argc, char *argv[])
             }
 
             cout << "Copying " << sourceName << endl;
-            *GRADING << "File: " << sourceName << ", beginning transmission, attempt " << count << endl;
+            *GRADING << "File: " << sourceName << ", beginning transmission, attempt " << endl;
 
             //
             // Read whole input file to get the total size
@@ -184,42 +183,47 @@ int main(int argc, char *argv[])
             }
             sourceSize = statbuf.st_size; // the size of the whole file
             packetNumber = sourceSize / PACKETSIZE;
-            if (sourceSize % PACKETSIZE)
+            lastPacketLen = sourceSize % PACKETSIZE;
+            if (lastPacketLen != 0)
             {
                 packetNumber++;
             }
+
+            // send the filename checksom and file length
+            originalchecksum = checksum(argv[4], (char *)sourceFile->d_name);
+            // printf("Original checksum is: %s\n", originalchecksum.c_str());
+            string filename(sourceFile->d_name);
+
+            requestCheck = originalchecksum + delim + filename + delim + to_string(sourceSize);
+            // printf("Original requestCheck is: %s\n", requestCheck.c_str());
+            sock->write(requestCheck.c_str(), strlen(requestCheck.c_str()) + 1); // send the first head info
+
             while (retry < 5)
             {
-
-                // send the filename checksom and file length
-                originalchecksum = checksum(argv[4], (char *)sourceFile->d_name);
-                printf("Original checksum is: %s\n", originalchecksum.c_str());
-                string filename(sourceFile->d_name);
-
-                requestCheck = originalchecksum + delim + filename + delim + to_string(sourceSize);
-                sock->write(requestCheck.c_str(), strlen(requestCheck.c_str()) + 1); // send the first head info
-                // SPLIT AND SEND THE PACKET
-                writeSocket(filename, packetNumber, sock, filenastiness);
-                *GRADING << "File: " << filename.c_str() << " transmission complete " << endl;
+                /// SPLIT AND SEND THE PACKET
+                writePacket(sourceName, packetNumber, lastPacketLen, sock, filenastiness);
+                sock->read(incomingMessage, sizeof(incomingMessage));
+                if (strcmp(incomingMessage, "Success") == 0)
+                {
+                    printf("end to end check is: %s\n", incomingMessage);
+                    printf("========================================\n");
+                    break;
+                }
                 retry++;
             }
-            sock->read(incomingMessage, sizeof(incomingMessage));
-            if (strcmp(incomingMessage, "Success") == 0)
+            if (retry < 5)
             {
-                receiveResponse = true;
-            }
-            if (receiveResponse)
-            {
-                printf("received \n");
+                *GRADING << "File: " << sourceName.c_str() << " transmission complete " << endl;
             }
             else
             {
+
                 printf("lose connection to the server\n");
+                exit(1);
             }
         }
         closedir(SRC);
     }
-
     //
     //  Handle networking errors -- for now, just print message and give up!
     //
@@ -473,7 +477,7 @@ makeFileName(string dir, string name)
     return ss.str(); // return dir/name
 }
 
-void writeSocket(string filename, int packernumber, C150DgmSocket *sock, int fileNastiness)
+void writePacket(string filename, int packernumber, int lastPacketLen, C150DgmSocket *sock, int filenastiness)
 {
     char incomingMessage[512];
     char *buffer;
@@ -484,13 +488,14 @@ void writeSocket(string filename, int packernumber, C150DgmSocket *sock, int fil
 
     NASTYFILE inputFile(filenastiness); // See c150nastyfile.h for interface
                                         // do an fopen on the input file
-    fopenretval = inputFile.fopen(sourceName.c_str(), "rb");
+    fopenretval = inputFile.fopen(filename.c_str(), "rb");
     if (fopenretval == NULL)
     {
-        cerr << "Error opening input file " << sourceName << " errno=" << strerror(errno) << endl;
+        cerr << "Error opening input file " << filename << " errno =" << strerror(errno) << endl;
         exit(12);
     }
     buffer = (char *)malloc(PACKETSIZE);
+
     for (int i = 0; i < packernumber - 1; i++)
     {
         retry = 0;
@@ -498,11 +503,14 @@ void writeSocket(string filename, int packernumber, C150DgmSocket *sock, int fil
         {
 
             inputFile.fread(buffer, 1, PACKETSIZE);
-            incomingMessage[PACKETSIZE] = '\0';
+            buffer[PACKETSIZE] = '\0';
             string message(buffer);
+
             message = message + delim + to_string(i);
             sock->write(message.c_str(), strlen(message.c_str()) + 1); // +1 includes the null
+            // printf("Packet %d is sent\n ", i);
             sock->read(incomingMessage, sizeof(incomingMessage));
+            printf("IncomingMessage for packet %d  is %s \n", i, incomingMessage);
             if (strcmp(incomingMessage, "Recived") == 0)
             {
                 break;
@@ -522,4 +530,5 @@ void writeSocket(string filename, int packernumber, C150DgmSocket *sock, int fil
     }
     inputFile.fread(buffer, 1, last);
     sock->write(buffer, strlen(buffer) + 1);
+    free(buffer);
 }
