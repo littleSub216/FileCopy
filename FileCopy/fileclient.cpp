@@ -40,6 +40,7 @@ bool isFile(string fname);
 void checkDirectory(char *dirname);
 string checksum(string dirname, string filename); // generate checksum
 string makeFileName(string dir, string name);
+void writeSocket(string filename, int packernumber, C150DgmSocket *sock, int fileNastiness);
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 //
 //                    Command line arguments
@@ -68,7 +69,7 @@ int main(int argc, char *argv[])
     //
     const int PACKETSIZE = 256;
     string delim = "#"; //  the delimeter to spilt the incoming message
-    
+
     ssize_t readlen;           // amount of data read from socket
     char incomingMessage[512]; // received message data
     int networknastiness;      // how aggressively do we drop packets
@@ -89,6 +90,7 @@ int main(int argc, char *argv[])
     string errorString;
     void *buffer;
     size_t sourceSize;
+    int packetNumber;
 
     //
     // Make sure command line looks right
@@ -133,38 +135,8 @@ int main(int argc, char *argv[])
 
         // Tell the DGMSocket which server to talk to
         sock->setServerName(argv[serverArg]);
-
-        // Send the message to the server
-        // c150debug->printf(C150APPLICATION, "%s: Request to copy file from directory: \"%s\"",
-        //                   argv[0], argv[msgArg]);
-        // sock->write(argv[msgArg], strlen(argv[msgArg]) + 1); // +1 includes the null
-
-        // // Read the targetname from the server
-        // c150debug->printf(C150APPLICATION, "%s: Returned from write, doing read()",
-        //                   argv[0]);
-        // readlen = sock->read(incomingMessage, sizeof(incomingMessage));
-        // // if (readlen == 0)
-        // // {
-        // //     c150debug->printf(C150APPLICATION, "Read zero length message, trying again");
-        // //     continue;
-        // // }
-        // //
-        // // Clean up the message in case it contained junk
-        // //
-        // incomingMessage[readlen] = '\0';  // make sure null terminated
-        // string incoming(incomingMessage); // Convert to C++ string ...it's slightly
-        //                                   // easier to work with, and cleanString
-        //                                   // expects it
-        // cleanString(incoming);            // c150ids-supplied utility: changes
-        //                                   // non-printing characters to .
-        // c150debug->printf(C150APPLICATION, "Successfully read %d bytes. Message=\"%s\"",
-        //                   readlen, incoming.c_str());
-
-        // Check and print the incoming message
-        // checkAndPrintMessage(readlen, incomingMessage, sizeof(incomingMessage));
-        // check the directory or the end to end result
-        // if (incoming.compare("TARGET") == 0)
-        // {
+        // set timeout to be 3 seconds
+        sock->turnOnTimeouts(3000);
 
         checkDirectory(argv[4]);
         //
@@ -183,11 +155,12 @@ int main(int argc, char *argv[])
         //
         while ((sourceFile = readdir(SRC)) != NULL)
         {
+            retry = 0;
             // skip the . and .. names
             if ((strcmp(sourceFile->d_name, ".") == 0) ||
                 (strcmp(sourceFile->d_name, "..") == 0))
                 continue; // never copy . or ..
-            retry = 0;
+
             string sourceName = makeFileName(argv[4], sourceFile->d_name); // make the absolute path of file
                                                                            //
             // make sure the file we're copying is not a directory
@@ -199,7 +172,7 @@ int main(int argc, char *argv[])
             }
 
             cout << "Copying " << sourceName << endl;
-            // *GRADING << "File: " << sourceName << ", beginning transmission, attempt " << count << endl;
+            *GRADING << "File: " << sourceName << ", beginning transmission, attempt " << count << endl;
 
             //
             // Read whole input file to get the total size
@@ -210,113 +183,41 @@ int main(int argc, char *argv[])
                 exit(20);
             }
             sourceSize = statbuf.st_size; // the size of the whole file
-
+            packetNumber = sourceSize / PACKETSIZE;
+            if (sourceSize % PACKETSIZE)
+            {
+                packetNumber++;
+            }
             while (retry < 5)
             {
 
-                // do the copy -- this will check for and
-                // skip subdirectories
-                // copyFile(argv[4], sourceFile->d_name, incoming.c_str(), filenastiness, retry);// generate the sha code for inputfile
+                // send the filename checksom and file length
                 originalchecksum = checksum(argv[4], (char *)sourceFile->d_name);
                 printf("Original checksum is: %s\n", originalchecksum.c_str());
-
-                /**
-                 * @brief divide and send the packets
-                 * 
-                 */
-                NASTYFILE inputFile(filenastiness); // See c150nastyfile.h for interface
-                                                    // do an fopen on the input file
-                fopenretval = inputFile.fopen(sourceName.c_str(), "rb");
-                if (fopenretval == NULL)
-                {
-                    cerr << "Error opening input file " << sourceName << " errno=" << strerror(errno) << endl;
-                    exit(12);
-                }
-                buffer = (void *)malloc(sourceSize);
-                //
-                // Read the whole file
-                //
-                filelen = inputFile.fread((char *)buffer, 1, sourceSize);
                 string filename(sourceFile->d_name);
-                
-                requestCheck = originalchecksum + delim + filename + delim +  filelen;
+
+                requestCheck = originalchecksum + delim + filename + delim + to_string(sourceSize);
                 sock->write(requestCheck.c_str(), strlen(requestCheck.c_str()) + 1); // send the first head info
-
                 // SPLIT AND SEND THE PACKET
-                int packetNumber = atoi(filelen.c_str())/ PACKETSIZE;
-                int i = 0;
-                while (i < packetNumber)
-                {
-                    char *readbuffer = (char *)((unsigned long)buffer + i * PACKETSIZE);
-                    if (i != packetNumber - 1)
-                    {
-                        inputFile.fread(readbuffer, 1, PACKETSIZE);
-                    }
-                    else
-                    {
-                        // LAST PACKET
-                        inputFile.fread(readbuffer, 1, sourceSize - packetNumber * PACKETSIZE);
-                    }
-                    string readpacket = string(readbuffer);
-                    splitfile[i] = readpacket; // store teh packet for resend
-                    requestCheck = readpacket + delim + to_string(i);
-                    // SEND THE PACKET
-                    sock->write(requestCheck.c_str(), strlen(requestCheck.c_str()) + 1); // send the packet one by one
-                    // SHOULD ADD THE ACK?
-                    i++;
-                }
-                // // READ THE RESPONSE
-                readlen = sock->read(incomingMessage, sizeof(incomingMessage));
-                if (readlen == 0)
-                {
-                    c150debug->printf(C150APPLICATION, "Read zero length message, trying again");
-                    retry++;
-                    continue;
-                }
-                //
-                // Clean up the message in case it contained junk
-                //
-                incomingMessage[readlen] = '\0';  // make sure null terminated
-                string incoming(incomingMessage); // Convert to C++ string ...it's slightly
-                                                  // easier to work with, and cleanString
-                                                  // expects it
-                cleanString(incoming);            // c150ids-supplied utility: changes
-                                                  // non-printing characters to .
-                if (incoming.compare("Success") == 0)
-                {
-                    printf("SUCCESS\n");
-                    *GRADING << "File: " << filename << "end-to-end check succeeded, attempt " << retry << endl;
-
-                    // send response to server, go to next file
-                    // requestCheck = filename + "is checked.";
-                    // requestCheck = "1";
-                    // sock->write(requestCheck.c_str(), strlen(requestCheck.c_str()) + 1);
-                    break;
-                }
-                else if (retry < 5)
-                {
-                    printf("FAIL, RETRY\n");
-                    // requestCheck = filename + "fails, plz try again.\n";
-                    // requestCheck = "0";
-                    // sock->write(requestCheck.c_str(), strlen(requestCheck.c_str()) + 1);
-                    retry++;
-                    // send response to server, go to next file
-                    *GRADING << "File: " << filename << "end-to-end check failed, attempt " << retry << endl;
-
-                    continue;
-                }
-                else
-                {
-                    requestCheck = filename + "Fail 5 times, terminated.\n";
-                    // sock->write(requestCheck.c_str(), strlen(requestCheck.c_str()) + 1);
-                    printf("Fail 5 times\n");
-                    *GRADING << "File: " << filename << "end-to-end check failed, attempt " << retry << endl;
-                    exit(0);
-                }
+                writeSocket(filename, packetNumber, sock, filenastiness);
+                *GRADING << "File: " << filename.c_str() << " transmission complete " << endl;
+                retry++;
             }
-
-            closedir(SRC);
+            sock->read(incomingMessage, sizeof(incomingMessage));
+            if (strcmp(incomingMessage, "Success") == 0)
+            {
+                receiveResponse = true;
+            }
+            if (receiveResponse)
+            {
+                printf("received \n");
+            }
+            else
+            {
+                printf("lose connection to the server\n");
+            }
         }
+        closedir(SRC);
     }
 
     //
@@ -521,7 +422,6 @@ bool isFile(string fname)
     return true;
 }
 
-
 // ------------------------------------------------------
 //
 //                   checksum
@@ -563,12 +463,63 @@ string checksum(string dirname, string filename)
 string
 makeFileName(string dir, string name)
 {
-  stringstream ss;
+    stringstream ss;
 
-  ss << dir;
-  // make sure dir name ends in /
-  if (dir.substr(dir.length() - 1, 1) != "/")
-    ss << '/';
-  ss << name;      // append file name to dir
-  return ss.str(); // return dir/name
+    ss << dir;
+    // make sure dir name ends in /
+    if (dir.substr(dir.length() - 1, 1) != "/")
+        ss << '/';
+    ss << name;      // append file name to dir
+    return ss.str(); // return dir/name
+}
+
+void writeSocket(string filename, int packernumber, C150DgmSocket *sock, int fileNastiness)
+{
+    char incomingMessage[512];
+    char *buffer;
+    const int PACKETSIZE = 256;
+    string delim = "#";
+    void *fopenretval;
+    int retry;
+
+    NASTYFILE inputFile(filenastiness); // See c150nastyfile.h for interface
+                                        // do an fopen on the input file
+    fopenretval = inputFile.fopen(sourceName.c_str(), "rb");
+    if (fopenretval == NULL)
+    {
+        cerr << "Error opening input file " << sourceName << " errno=" << strerror(errno) << endl;
+        exit(12);
+    }
+    buffer = (char *)malloc(PACKETSIZE);
+    for (int i = 0; i < packernumber - 1; i++)
+    {
+        retry = 0;
+        while (retry < 4)
+        {
+
+            inputFile.fread(buffer, 1, PACKETSIZE);
+            incomingMessage[PACKETSIZE] = '\0';
+            string message(buffer);
+            message = message + delim + to_string(i);
+            sock->write(message.c_str(), strlen(message.c_str()) + 1); // +1 includes the null
+            sock->read(incomingMessage, sizeof(incomingMessage));
+            if (strcmp(incomingMessage, "Recived") == 0)
+            {
+                break;
+            }
+            retry++;
+        }
+    }
+    // last packet
+    int last;
+    if (lastPacketLen == 0)
+    {
+        last = 256;
+    }
+    else
+    {
+        last = lastPacketLen;
+    }
+    inputFile.fread(buffer, 1, last);
+    sock->write(buffer, strlen(buffer) + 1);
 }

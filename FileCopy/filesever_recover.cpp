@@ -24,7 +24,7 @@
 #include <openssl/sha.h>
 #include <vector>
 
-#define PACKETSIZE 256
+// #define PACKETSIZE 256
 
 using namespace std;         // for C++ std library
 using namespace C150NETWORK; // for all the comp150 utilities
@@ -49,6 +49,7 @@ int main(int argc, char *argv[])
     char incomingMessage[512]; // received message data
     int networknastiness;      // how aggressively do we drop packets
     int filenastiness;         //corruption during the read and write
+    const int PACKETSIZE = 256;
     string response;
     size_t len; // length of w length
 
